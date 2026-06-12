@@ -1,0 +1,117 @@
+#1 [internal] load local bake definitions
+#1 reading from stdin 1.47kB 0.0s done
+#1 DONE 0.0s
+
+#2 [frontend internal] load build definition from Dockerfile
+#2 transferring dockerfile:
+#2 transferring dockerfile: 468B done
+#2 DONE 0.0s
+
+#3 [backend internal] load build definition from Dockerfile.backend
+#3 transferring dockerfile: 1.29kB done
+#3 DONE 0.0s
+
+#4 [backend internal] load metadata for docker.io/library/eclipse-temurin:8-jre
+#4 ...
+
+#5 [frontend internal] load metadata for docker.io/library/node:20-alpine
+#5 DONE 0.9s
+
+#6 [backend internal] load metadata for docker.io/library/maven:3.9.9-eclipse-temurin-8
+#6 DONE 0.9s
+
+#4 [backend internal] load metadata for docker.io/library/eclipse-temurin:8-jre
+#4 DONE 0.9s
+
+#7 [frontend internal] load .dockerignore
+#7 transferring context: 2B done
+#7 DONE 0.0s
+
+#8 [backend internal] load .dockerignore
+#8 transferring context: 115B done
+#8 DONE 0.0s
+
+#9 [backend internal] load build context
+#9 DONE 0.0s
+
+#10 [frontend internal] load build context
+#10 transferring context: 806B done
+#10 DONE 0.0s
+
+#11 [frontend 1/6] FROM docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293
+#11 resolve docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 0.0s done
+#11 DONE 0.0s
+
+#12 [frontend 3/6] COPY package.json ./
+#12 CACHED
+
+#13 [frontend 2/6] WORKDIR /app
+#13 CACHED
+
+#14 [frontend 5/6] RUN npm install
+#14 CACHED
+
+#15 [frontend 4/6] RUN npm config set proxy http://192.168.8.2:3128 && npm config set https-proxy http://192.168.8.2:3128
+#15 CACHED
+
+#16 [frontend 6/6] COPY . .
+#16 CACHED
+
+#17 [backend stage-1 1/3] FROM docker.io/library/eclipse-temurin:8-jre@sha256:528e40dc5c99074cd5236d83906bcf447b26f75e5dc93be7f003c836e994eb42
+#17 resolve docker.io/library/eclipse-temurin:8-jre@sha256:528e40dc5c99074cd5236d83906bcf447b26f75e5dc93be7f003c836e994eb42 0.1s done
+#17 DONE 0.1s
+
+#18 [backend build 1/6] FROM docker.io/library/maven:3.9.9-eclipse-temurin-8@sha256:e20e4fc05fb5480c884a1f750c362ed0e91aca15cec5736e12796713710ec9b3
+#18 resolve docker.io/library/maven:3.9.9-eclipse-temurin-8@sha256:e20e4fc05fb5480c884a1f750c362ed0e91aca15cec5736e12796713710ec9b3 0.1s done
+#18 DONE 0.1s
+
+#9 [backend internal] load build context
+#9 transferring context: 4.09kB 0.0s done
+#9 DONE 0.0s
+
+#19 [backend build 4/6] COPY pom.xml .
+#19 CACHED
+
+#20 [backend build 6/6] RUN mvn -q -DskipTests package
+#20 CACHED
+
+#21 [backend build 5/6] COPY src ./src
+#21 CACHED
+
+#22 [backend build 2/6] WORKDIR /workspace
+#22 CACHED
+
+#23 [backend stage-1 2/3] WORKDIR /app
+#23 CACHED
+
+#24 [backend build 3/6] RUN mkdir -p /root/.m2 && printf '%s\n'   '<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"'   '          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"'   '          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 https://maven.apache.org/xsd/settings-1.0.0.xsd">'   '  <proxies>'   '    <proxy>'   '      <id>proxy</id>'   '      <active>true</active>'   '      <protocol>http</protocol>'   '      <host>192.168.8.2</host>'   '      <port>3128</port>'   '    </proxy>'   '    <proxy>'   '      <id>proxy-https</id>'   '      <active>true</active>'   '      <protocol>https</protocol>'   '      <host>192.168.8.2</host>'   '      <port>3128</port>'   '    </proxy>'   '  </proxies>'   '</settings>' > /root/.m2/settings.xml
+#24 CACHED
+
+#25 [backend stage-1 3/3] COPY --from=build /workspace/target/*.jar app.jar
+#25 CACHED
+
+#26 [frontend] exporting to image
+#26 exporting layers done
+#26 exporting manifest sha256:a2c66866e5b075801a6591b68e0c58f9d8d3293a78d4eee7c4052a741107c345 done
+#26 exporting config sha256:4253afee463a5ad3f2b88fc25c3c4a13bbc50c6f617b93d9b3db87149378992d done
+#26 exporting attestation manifest sha256:a5156f49dfd24a99da442839fccaeba738312a0564ab8518d21f91c411341f5e 0.0s done
+#26 exporting manifest list sha256:6f1d013d5301dd4b97c53dfb0c64204c5c20a8dc4f556d5dc9396ffc0a77d1d1 0.0s done
+#26 naming to docker.io/library/toikhana-frontend:latest done
+#26 unpacking to docker.io/library/toikhana-frontend:latest done
+#26 DONE 0.1s
+
+#27 [backend] exporting to image
+#27 exporting layers done
+#27 exporting manifest sha256:ec6ed9e5bf2dee2f508e9b2baade0ec4e58d474d91e18cb0fd530ff04af53933 done
+#27 exporting config sha256:68ae0a98114a6dcf4b864f22a5d845f8c910c4887d7b9b4aa6ea6a774fcc14f1 done
+#27 exporting attestation manifest sha256:3c95e0d7ef8b096b66c3d4f723fea55fdd0a773b22b4f4b8dfda4da2c81b1d6c 0.0s done
+#27 exporting manifest list sha256:18533fab77f62428e334ac510adb80d679b01dd5ebd8534310cf28eed7fc1108 0.0s done
+#27 naming to docker.io/library/toikhana-backend:latest done
+#27 unpacking to docker.io/library/toikhana-backend:latest 0.0s done
+#27 DONE 0.1s
+
+#28 [frontend] resolving provenance for metadata file
+#28 DONE 0.0s
+
+#29 [backend] resolving provenance for metadata file
+#29 DONE 0.0s

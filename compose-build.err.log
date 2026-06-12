@@ -1,0 +1,13 @@
+ toikhana-backend  Built
+ toikhana-frontend  Built
+ Container toikhana-db-1  Running
+ Container toikhana-backend-1  Recreate
+ Container toikhana-backend-1  Recreated
+ Container toikhana-frontend-1  Recreate
+ Container toikhana-frontend-1  Recreated
+ Container toikhana-db-1  Waiting
+ Container toikhana-db-1  Healthy
+ Container toikhana-backend-1  Starting
+ Container toikhana-backend-1  Started
+ Container toikhana-frontend-1  Starting
+ Container toikhana-frontend-1  Started

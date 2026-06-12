@@ -1,0 +1,47 @@
+spring:
+  application:
+    name: toikhana
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+    open-in-view: false
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+  h2:
+    console:
+      enabled: true
+
+server:
+  port: 8080
+
+toikhana:
+  admin:
+    username: admin
+    password: admin123
+  storage:
+    upload-dir: uploads
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/toikhana}
+    username: ${DATABASE_USERNAME:toikhana}
+    password: ${DATABASE_PASSWORD:toikhana}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+
+server:
+  forward-headers-strategy: framework
