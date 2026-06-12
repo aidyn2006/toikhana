@@ -1,6 +1,6 @@
-# Production reverse proxy for toikhana.kz
+# Production reverse proxy for toikhan.kz
 # Serves the built SPA (frontend/dist) and forwards API + dynamic sitemap to the backend.
-# Copy/adapt this into your nginx (or Caddy/Traefik) that terminates the toikhana.kz domain.
+# Copy/adapt this into your nginx (or Caddy/Traefik) that terminates the toikhan.kz domain.
 
 upstream toikhana_backend {
     server backend:8080;   # change to 127.0.0.1:8080 if backend runs on the host
@@ -8,7 +8,7 @@ upstream toikhana_backend {
 
 server {
     listen 80;
-    server_name toikhana.kz www.toikhana.kz;
+    server_name toikhan.kz www.toikhan.kz;
 
     root /usr/share/nginx/html;   # where frontend/dist is deployed
     index index.html;

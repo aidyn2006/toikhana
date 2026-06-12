@@ -1,13 +1,13 @@
 import { Helmet } from 'react-helmet-async';
 
-const SITE_NAME = 'toikhana.kz';
+const SITE_NAME = 'toikhan.kz';
 const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=1200&q=80';
 
 function siteOrigin() {
   if (typeof window !== 'undefined' && window.location?.origin) {
     return window.location.origin;
   }
-  return 'https://toikhana.kz';
+  return 'https://toikhan.kz';
 }
 
 export function canonicalUrl(path?: string) {

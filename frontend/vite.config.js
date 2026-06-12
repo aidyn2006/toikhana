@@ -5,6 +5,12 @@ const backend = process.env.BACKEND_ORIGIN ?? 'http://localhost:8080';
 export default defineConfig({
     plugins: [react()],
     server: {
+        allowedHosts: [
+            'toikhan.kz',
+            'www.toikhan.kz',
+            'toikhana.kz',
+            'www.toikhana.kz'
+        ],
         port: 5173,
         proxy: {
             '/api': backend,
