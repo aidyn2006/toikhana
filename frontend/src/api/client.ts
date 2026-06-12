@@ -3,13 +3,14 @@ import type { BlogPost, Booking, City, OwnerApplication, Toikhana, ToikhanaCard 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '';
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...((init?.headers as Record<string, string>) ?? {}),
+    ...getAdminAuthHeader()
+  };
   const response = await fetch(`${API_BASE}${path}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init?.headers ?? {}),
-      ...(getAdminAuthHeader())
-    },
-    ...init
+    ...init,
+    headers
   });
 
   if (!response.ok) {
@@ -20,7 +21,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-function getAdminAuthHeader() {
+function getAdminAuthHeader(): Record<string, string> {
   const auth = localStorage.getItem('toikhana.adminAuth');
   return auth ? { Authorization: `Basic ${auth}` } : {};
 }

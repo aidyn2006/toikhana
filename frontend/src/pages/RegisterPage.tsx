@@ -26,7 +26,9 @@ export function RegisterPage() {
           title="Подключить свою тойхану"
           description="Отправьте заявку, если хотите получать гостей из каталога."
           submitLabel="Отправить заявку"
-          onSubmit={async (payload) => mutation.mutateAsync(payload)}
+          onSubmit={async (payload) => {
+            await mutation.mutateAsync(payload);
+          }}
         />
       </div>
       {mutation.isSuccess ? (

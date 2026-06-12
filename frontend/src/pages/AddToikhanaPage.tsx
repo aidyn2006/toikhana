@@ -24,7 +24,9 @@ export function AddToikhanaPage() {
         title="Заявка на размещение"
         description="Это не кабинет администратора. Это рабочая форма для новых владельцев тойхан."
         submitLabel="Отправить заявку"
-        onSubmit={async (payload) => mutation.mutateAsync(payload)}
+        onSubmit={async (payload) => {
+          await mutation.mutateAsync(payload);
+        }}
       />
       {mutation.isSuccess ? (
         <div className="rounded-[1.75rem] bg-emerald-50 p-6 text-emerald-900">

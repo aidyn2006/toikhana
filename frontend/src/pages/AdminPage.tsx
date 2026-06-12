@@ -80,11 +80,15 @@ export function AdminPage() {
           <section className="grid gap-6 lg:grid-cols-2">
             <div className="space-y-4">
               <h2 className="font-serif text-3xl">Тойханы</h2>
-              <ToikhanaForm onSubmit={async (payload) => createMutation.mutateAsync(payload)} />
+              <ToikhanaForm
+                onSubmit={async (payload) => {
+                  await createMutation.mutateAsync(payload);
+                }}
+              />
               <PhotoUpload
-                onSubmit={async ({ toikhanaId, file, isMain, sortOrder }) =>
-                  uploadMutation.mutateAsync({ toikhanaId, file, isMain, sortOrder })
-                }
+                onSubmit={async ({ toikhanaId, file, isMain, sortOrder }) => {
+                  await uploadMutation.mutateAsync({ toikhanaId, file, isMain, sortOrder });
+                }}
               />
               <div className="rounded-[1.75rem] bg-card p-6 shadow-soft">
                 <h3 className="font-serif text-2xl">Cities</h3>
