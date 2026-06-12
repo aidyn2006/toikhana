@@ -26,6 +26,7 @@ services:
         https_proxy: ${https_proxy}
     environment:
       SPRING_PROFILES_ACTIVE: prod
+      SITE_BASE_URL: https://toikhana.kz
       DATABASE_URL: jdbc:postgresql://db:5432/toikhana
       DATABASE_USERNAME: toikhana
       DATABASE_PASSWORD: toikhana
