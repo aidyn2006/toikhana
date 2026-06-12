@@ -24,6 +24,8 @@ toikhana:
     password: admin123
   storage:
     upload-dir: uploads
+  site:
+    base-url: ${SITE_BASE_URL:https://toikhana.kz}
 
 ---
 spring:

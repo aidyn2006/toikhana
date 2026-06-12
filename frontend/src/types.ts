@@ -58,6 +58,16 @@ export interface Booking {
   status?: string;
 }
 
+export interface BlogPost {
+  id: number;
+  title: string;
+  slug: string;
+  excerpt?: string;
+  coverUrl?: string;
+  body?: string;
+  publishedAt?: string;
+}
+
 export interface OwnerApplication {
   id?: number;
   name: string;

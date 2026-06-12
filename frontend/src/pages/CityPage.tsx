@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react';
-import { Helmet } from 'react-helmet-async';
 import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
-import { EmptyState, FilterPanel, PageHeader, ToikhanaGrid } from '../components';
+import { EmptyState, FilterPanel, PageHeader, ToikhanaGrid, Seo, breadcrumbJsonLd } from '../components';
 import { getCity, getToikhanas } from '../api/client';
 
 export function CityPage() {
@@ -21,12 +20,23 @@ export function CityPage() {
     [cityQuery.data]
   );
 
+  const cityName = cityQuery.data?.nameRu;
+
   return (
-    <main className="space-y-8 p-4 md:p-8">
-      <Helmet>
-        <title>{cityQuery.data ? `Тойхана ${cityQuery.data.nameRu} — ${cityQuery.data.toikhanaCount} залов | toikhana.kz` : 'Тойхана | toikhana.kz'}</title>
-        <meta name="description" content={cityQuery.data ? `${cityQuery.data.nameRu} тойханалары. ${cityQuery.data.toikhanaCount} зал.` : 'Тойханалар каталоги'} />
-      </Helmet>
+    <main className="mx-auto max-w-7xl space-y-8 p-4 md:p-8">
+      <Seo
+        title={cityName ? `Тойхана ${cityName} — ${cityQuery.data?.toikhanaCount ?? 0} залов | toikhana.kz` : 'Тойхана | toikhana.kz'}
+        description={
+          cityName
+            ? `Тойханы и банкетные залы в городе ${cityName}. ${cityQuery.data?.toikhanaCount ?? 0} объектов: фото, цены, вместимость и заявки онлайн.`
+            : 'Каталог тойхан по городам Казахстана.'
+        }
+        path={citySlug ? `/${citySlug}` : '/'}
+        jsonLd={breadcrumbJsonLd([
+          { name: 'Главная', path: '/' },
+          { name: cityName ?? 'Город', path: citySlug ? `/${citySlug}` : '/' }
+        ])}
+      />
       <PageHeader title={title} count={itemsQuery.data?.count ?? 0} />
       <FilterPanel capacity={capacity} onCapacityChange={setCapacity} type={type} onTypeChange={setType} />
       {itemsQuery.data?.items?.length ? (

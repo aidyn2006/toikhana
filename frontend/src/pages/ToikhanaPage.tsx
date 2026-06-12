@@ -1,4 +1,3 @@
-import { Helmet } from 'react-helmet-async';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import {
@@ -8,7 +7,11 @@ import {
   PhotoGallery,
   SimilarToikhanas,
   ToyTypeBadges,
-  ToikhanaInfo
+  ToikhanaInfo,
+  MobileContactBar,
+  Seo,
+  breadcrumbJsonLd,
+  canonicalUrl
 } from '../components';
 import { getSimilarToikhanas, getToikhana, submitBooking } from '../api/client';
 
@@ -21,12 +24,49 @@ export function ToikhanaPage() {
 
   const item = itemQuery.data;
 
+  const placeJsonLd = item
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'EventVenue',
+        name: item.name,
+        description: item.descriptionRu,
+        url: canonicalUrl(`/toikhana/${item.slug}`),
+        image: item.photos?.[0]?.url,
+        telephone: item.phone,
+        address: {
+          '@type': 'PostalAddress',
+          streetAddress: item.address,
+          addressLocality: item.cityName,
+          addressCountry: 'KZ'
+        }
+      }
+    : null;
+
   return (
-    <main className="space-y-8 p-4 md:p-8">
-      <Helmet>
-        <title>{item ? `${item.name} — Тойхана ${item.citySlug} | toikhana.kz` : 'Тойхана | toikhana.kz'}</title>
-        <meta name="description" content={item?.descriptionRu ?? 'Тойхана туралы ақпарат'} />
-      </Helmet>
+    <main className="mx-auto max-w-7xl space-y-8 p-4 pb-24 md:p-8 md:pb-8">
+      <Seo
+        title={item ? `${item.name} — тойхана в городе ${item.cityName} | toikhana.kz` : 'Тойхана | toikhana.kz'}
+        description={
+          item
+            ? item.descriptionRu ??
+              `${item.name} — банкетный зал в городе ${item.cityName}. Вместимость, цены, фото и заявки онлайн.`
+            : 'Информация о тойхане.'
+        }
+        path={item ? `/toikhana/${item.slug}` : undefined}
+        image={item?.photos?.[0]?.url}
+        jsonLd={
+          item && placeJsonLd
+            ? [
+                placeJsonLd,
+                breadcrumbJsonLd([
+                  { name: 'Главная', path: '/' },
+                  { name: item.cityName ?? 'Город', path: `/${item.citySlug}` },
+                  { name: item.name, path: `/toikhana/${item.slug}` }
+                ])
+              ]
+            : undefined
+        }
+      />
       {item ? (
         <>
           <PhotoGallery photos={item.photos} />
@@ -50,6 +90,7 @@ export function ToikhanaPage() {
             />
           </div>
           {similarQuery.data ? <SimilarToikhanas items={similarQuery.data} /> : null}
+          <MobileContactBar phone={item.phone} whatsapp={item.whatsapp} />
         </>
       ) : null}
     </main>

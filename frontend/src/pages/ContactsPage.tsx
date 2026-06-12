@@ -1,11 +1,13 @@
-import { Helmet } from 'react-helmet-async';
+import { Seo } from '../components';
 
 export function ContactsPage() {
   return (
     <main className="mx-auto max-w-4xl space-y-8 px-4 py-6 md:px-8 md:py-10">
-      <Helmet>
-        <title>Контакты | toikhana.kz</title>
-      </Helmet>
+      <Seo
+        title="Контакты | toikhana.kz"
+        description="Свяжитесь с toikhana.kz: email, WhatsApp. Каталог тойхан по всему Казахстану."
+        path="/contacts"
+      />
       <section className="rounded-[2rem] bg-white p-8 shadow-soft">
         <p className="text-sm uppercase tracking-[0.3em] text-slate-500">Контакты</p>
         <h1 className="mt-3 font-serif text-4xl">Свяжитесь с нами</h1>
