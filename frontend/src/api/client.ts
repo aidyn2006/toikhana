@@ -1,4 +1,4 @@
-import type { Booking, City, Toikhana, ToikhanaCard } from '../types';
+import type { Booking, City, OwnerApplication, Toikhana, ToikhanaCard } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '';
 
@@ -68,6 +68,20 @@ export function submitBooking(payload: Booking) {
   });
 }
 
+export function submitOwnerApplication(payload: {
+  name: string;
+  city: string;
+  phone: string;
+  whatsapp?: string;
+  hallName?: string;
+  message?: string;
+}) {
+  return request<{ application: OwnerApplication; success: boolean }>('/api/owner-applications', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
 export function adminLogin(username: string, password: string) {
   setAdminAuth(username, password);
   return request('/api/admin/toikhanas');
@@ -79,6 +93,10 @@ export function getAdminToikhanas() {
 
 export function getAdminBookings() {
   return request<Booking[]>('/api/admin/bookings');
+}
+
+export function getAdminOwnerApplications() {
+  return request<OwnerApplication[]>('/api/admin/owner-applications');
 }
 
 export function createAdminToikhana(payload: Record<string, unknown>) {
@@ -117,6 +135,13 @@ export function uploadAdminToikhanaPhoto(
 
 export function updateBookingStatus(id: number, status: string) {
   return request<Booking>(`/api/admin/bookings/${id}/status`, {
+    method: 'PUT',
+    body: JSON.stringify({ status })
+  });
+}
+
+export function updateOwnerApplicationStatus(id: number, status: string) {
+  return request<OwnerApplication>(`/api/admin/owner-applications/${id}/status`, {
     method: 'PUT',
     body: JSON.stringify({ status })
   });

@@ -7,8 +7,10 @@ import {
   clearAdminAuth,
   createAdminToikhana,
   getAdminBookings,
+  getAdminOwnerApplications,
   getAdminToikhanas,
   getCities,
+  updateOwnerApplicationStatus,
   uploadAdminToikhanaPhoto
 } from '../api/client';
 
@@ -17,6 +19,11 @@ export function AdminPage() {
   const citiesQuery = useQuery({ queryKey: ['admin', 'cities'], queryFn: getCities, enabled: loggedIn });
   const toikhanasQuery = useQuery({ queryKey: ['admin', 'toikhanas'], queryFn: getAdminToikhanas, enabled: loggedIn });
   const bookingsQuery = useQuery({ queryKey: ['admin', 'bookings'], queryFn: getAdminBookings, enabled: loggedIn });
+  const ownerApplicationsQuery = useQuery({
+    queryKey: ['admin', 'owner-applications'],
+    queryFn: getAdminOwnerApplications,
+    enabled: loggedIn
+  });
   const loginMutation = useMutation({
     mutationFn: ({ username, password }: { username: string; password: string }) => adminLogin(username, password),
     onSuccess: () => setLoggedIn(true)
@@ -41,6 +48,10 @@ export function AdminPage() {
       sortOrder?: number;
     }) => uploadAdminToikhanaPhoto(toikhanaId, file, isMain, sortOrder),
     onSuccess: () => toikhanasQuery.refetch()
+  });
+  const ownerStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: number; status: string }) => updateOwnerApplicationStatus(id, status),
+    onSuccess: () => ownerApplicationsQuery.refetch()
   });
 
   return (
@@ -68,7 +79,7 @@ export function AdminPage() {
           </button>
           <section className="grid gap-6 lg:grid-cols-2">
             <div className="space-y-4">
-              <h2 className="font-serif text-3xl">Тойханалар</h2>
+              <h2 className="font-serif text-3xl">Тойханы</h2>
               <ToikhanaForm onSubmit={async (payload) => createMutation.mutateAsync(payload)} />
               <PhotoUpload
                 onSubmit={async ({ toikhanaId, file, isMain, sortOrder }) =>
@@ -82,9 +93,50 @@ export function AdminPage() {
               <div className="rounded-[1.75rem] bg-card p-6 shadow-soft">
                 <pre className="overflow-auto text-xs">{JSON.stringify(toikhanasQuery.data ?? [], null, 2)}</pre>
               </div>
+              <div className="rounded-[1.75rem] bg-card p-6 shadow-soft">
+                <h3 className="font-serif text-2xl">Заявки владельцев</h3>
+                <div className="mt-4 space-y-4">
+                  {(ownerApplicationsQuery.data ?? []).map((application) => (
+                    <div key={application.id} className="rounded-2xl border border-slate-100 p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <div className="font-semibold">{application.name}</div>
+                          <div className="text-sm text-slate-500">
+                            {application.city}
+                            {application.hallName ? ` · ${application.hallName}` : ''}
+                          </div>
+                        </div>
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">
+                          {application.status}
+                        </span>
+                      </div>
+                      <div className="mt-3 text-sm text-slate-600">
+                        <div>{application.phone}</div>
+                        {application.whatsapp ? <div>{application.whatsapp}</div> : null}
+                        {application.message ? <div className="mt-2 whitespace-pre-line">{application.message}</div> : null}
+                      </div>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {['reviewed', 'contacted', 'approved', 'rejected'].map((status) => (
+                          <button
+                            key={status}
+                            type="button"
+                            className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em]"
+                            onClick={() => ownerStatusMutation.mutate({ id: application.id ?? 0, status })}
+                          >
+                            {status}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  {!ownerApplicationsQuery.data?.length ? (
+                    <p className="text-sm text-slate-500">Пока нет заявок владельцев.</p>
+                  ) : null}
+                </div>
+              </div>
             </div>
             <div className="space-y-4">
-              <h2 className="font-serif text-3xl">Заявки</h2>
+              <h2 className="font-serif text-3xl">Заявки гостей</h2>
               <BookingList bookings={bookingsQuery.data ?? []} />
             </div>
           </section>

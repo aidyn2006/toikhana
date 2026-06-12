@@ -4,12 +4,14 @@ import { LoginForm } from '../components';
 import { adminLogin } from '../api/client';
 
 export function LoginPage() {
-  const mutation = useMutation({ mutationFn: ({ username, password }: { username: string; password: string }) => adminLogin(username, password) });
+  const mutation = useMutation({
+    mutationFn: ({ username, password }: { username: string; password: string }) => adminLogin(username, password)
+  });
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-6 md:px-8 md:py-10">
       <Helmet>
-        <title>Войти | toikhana.kz</title>
+        <title>Войти в админку | toikhana.kz</title>
       </Helmet>
       <LoginForm
         onSubmit={async (username, password) => {

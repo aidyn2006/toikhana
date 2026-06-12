@@ -57,3 +57,15 @@ export interface Booking {
   message?: string;
   status?: string;
 }
+
+export interface OwnerApplication {
+  id?: number;
+  name: string;
+  city: string;
+  phone: string;
+  whatsapp?: string;
+  hallName?: string;
+  message?: string;
+  status?: string;
+  createdAt?: string;
+}
