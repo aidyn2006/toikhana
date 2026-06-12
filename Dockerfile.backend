@@ -8,27 +8,6 @@ ENV HTTPS_PROXY=${HTTPS_PROXY}
 ENV http_proxy=${http_proxy}
 ENV https_proxy=${https_proxy}
 WORKDIR /workspace
-RUN mkdir -p /root/.m2 && printf '%s\n' \
-  '<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"' \
-  '          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"' \
-  '          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 https://maven.apache.org/xsd/settings-1.0.0.xsd">' \
-  '  <proxies>' \
-  '    <proxy>' \
-  '      <id>proxy</id>' \
-  '      <active>true</active>' \
-  '      <protocol>http</protocol>' \
-  '      <host>192.168.8.2</host>' \
-  '      <port>3128</port>' \
-  '    </proxy>' \
-  '    <proxy>' \
-  '      <id>proxy-https</id>' \
-  '      <active>true</active>' \
-  '      <protocol>https</protocol>' \
-  '      <host>192.168.8.2</host>' \
-  '      <port>3128</port>' \
-  '    </proxy>' \
-  '  </proxies>' \
-  '</settings>' > /root/.m2/settings.xml
 COPY pom.xml .
 COPY src ./src
 RUN mvn -q -DskipTests package

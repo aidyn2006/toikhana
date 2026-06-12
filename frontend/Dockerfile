@@ -9,7 +9,6 @@ ENV http_proxy=${http_proxy}
 ENV https_proxy=${https_proxy}
 WORKDIR /app
 COPY package.json ./
-RUN npm config set proxy http://192.168.8.2:3128 && npm config set https-proxy http://192.168.8.2:3128
 RUN npm install
 COPY . .
 EXPOSE 5173
