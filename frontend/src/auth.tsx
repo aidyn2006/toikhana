@@ -16,6 +16,7 @@ interface AuthValue {
 const AuthContext = createContext<AuthValue | null>(null);
 
 function readStoredUser(): User | null {
+  if (typeof window === 'undefined') return null;
   try {
     const raw = window.localStorage.getItem(USER_KEY);
     if (!raw || !getStoredToken()) return null;

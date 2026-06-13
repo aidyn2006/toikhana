@@ -3,8 +3,10 @@ import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import { EmptyState, FilterPanel, PageHeader, ToikhanaGrid, Seo, breadcrumbJsonLd } from '../components';
 import { getCity, getToikhanas } from '../api/client';
+import { useI18n } from '../i18n';
 
 export function CityPage() {
+  const { t, loc } = useI18n();
   const { citySlug = '' } = useParams();
   const [capacity, setCapacity] = useState('');
   const [type, setType] = useState('');
@@ -15,9 +17,10 @@ export function CityPage() {
     queryFn: () => getToikhanas({ city: citySlug, capacity: capacity ? Number(capacity) : undefined, type: type || undefined })
   });
 
+  const localCityName = cityQuery.data ? loc(cityQuery.data.nameRu, cityQuery.data.nameKk) : undefined;
   const title = useMemo(
-    () => (cityQuery.data ? `Тойхана ${cityQuery.data.nameRu}` : 'Тойханалар'),
-    [cityQuery.data]
+    () => (localCityName ? `${t('city.titlePrefix')} ${localCityName}` : t('city.titleAll')),
+    [localCityName, t]
   );
 
   const cityName = cityQuery.data?.nameRu;
@@ -42,7 +45,7 @@ export function CityPage() {
       {itemsQuery.data?.items?.length ? (
         <ToikhanaGrid items={itemsQuery.data.items} />
       ) : (
-        <EmptyState title="Залов пока нет" text="Попробуйте другой город или другой фильтр." />
+        <EmptyState title={t('city.empty')} text={t('city.emptyText')} />
       )}
     </main>
   );

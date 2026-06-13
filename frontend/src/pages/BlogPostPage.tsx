@@ -2,17 +2,20 @@ import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { EmptyState, Seo, breadcrumbJsonLd, canonicalUrl } from '../components';
 import { getBlogPost } from '../api/client';
+import { useI18n } from '../i18n';
 
-function formatDate(value?: string) {
+function formatDate(value: string | undefined, locale: string) {
   if (!value) return '';
   try {
-    return new Date(value).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+    return new Date(value).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' });
   } catch {
     return '';
   }
 }
 
 export function BlogPostPage() {
+  const { t, lang } = useI18n();
+  const dateLocale = lang === 'kk' ? 'kk-KZ' : 'ru-RU';
   const { slug = '' } = useParams();
   const postQuery = useQuery({ queryKey: ['blog', slug], queryFn: () => getBlogPost(slug), enabled: Boolean(slug) });
   const post = postQuery.data;
@@ -21,9 +24,9 @@ export function BlogPostPage() {
     return (
       <main className="mx-auto max-w-3xl px-4 py-10 md:px-8">
         <Seo title="Статья не найдена | toikhana.kz" path={`/blog/${slug}`} noindex />
-        <EmptyState title="Статья не найдена" text="Возможно, ссылка устарела." />
+        <EmptyState title={t('blog.notFound')} text={t('blog.notFoundText')} />
         <Link to="/blog" className="mt-6 inline-block text-sm font-medium text-primary hover:underline">
-          ← Назад в блог
+          {t('blog.back')}
         </Link>
       </main>
     );
@@ -63,11 +66,11 @@ export function BlogPostPage() {
         ]}
       />
       <Link to="/blog" className="inline-block text-sm font-medium text-primary hover:underline">
-        ← Все статьи
+        {t('blog.all')}
       </Link>
       <article className="space-y-6">
         <header className="space-y-3">
-          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{formatDate(post.publishedAt)}</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{formatDate(post.publishedAt, dateLocale)}</p>
           <h1 className="font-serif text-4xl leading-tight">{post.title}</h1>
           {post.excerpt ? <p className="text-lg leading-7 text-slate-600">{post.excerpt}</p> : null}
         </header>

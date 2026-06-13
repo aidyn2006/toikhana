@@ -1,27 +1,27 @@
 import React from 'react';
-import ReactDOM from 'react-dom/client';
+import { createRoot, hydrateRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { HelmetProvider } from 'react-helmet-async';
+import { QueryClient } from '@tanstack/react-query';
 import { App } from './App';
-import { I18nProvider } from './i18n';
-import { AuthProvider } from './auth';
+import { Providers } from './providers';
 import './index.css';
 
 const queryClient = new QueryClient();
+const container = document.getElementById('root') as HTMLElement;
 
-ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
+const app = (
   <React.StrictMode>
-    <HelmetProvider>
-      <QueryClientProvider client={queryClient}>
-        <I18nProvider>
-          <AuthProvider>
-            <BrowserRouter>
-              <App />
-            </BrowserRouter>
-          </AuthProvider>
-        </I18nProvider>
-      </QueryClientProvider>
-    </HelmetProvider>
+    <Providers queryClient={queryClient} helmetContext={{}}>
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    </Providers>
   </React.StrictMode>
 );
+
+// Prerendered routes ship real markup in #root — hydrate it; otherwise mount fresh.
+if (container.hasChildNodes()) {
+  hydrateRoot(container, app);
+} else {
+  createRoot(container).render(app);
+}

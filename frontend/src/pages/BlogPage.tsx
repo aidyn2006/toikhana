@@ -2,17 +2,20 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { EmptyState, Seo, breadcrumbJsonLd } from '../components';
 import { getBlogPosts } from '../api/client';
+import { useI18n } from '../i18n';
 
-function formatDate(value?: string) {
+function formatDate(value: string | undefined, locale: string) {
   if (!value) return '';
   try {
-    return new Date(value).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+    return new Date(value).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' });
   } catch {
     return '';
   }
 }
 
 export function BlogPage() {
+  const { t, lang } = useI18n();
+  const dateLocale = lang === 'kk' ? 'kk-KZ' : 'ru-RU';
   const postsQuery = useQuery({ queryKey: ['blog'], queryFn: getBlogPosts });
   const posts = postsQuery.data ?? [];
 
@@ -28,11 +31,9 @@ export function BlogPage() {
         ])}
       />
       <section className="rounded-[2rem] bg-white p-8 shadow-soft">
-        <p className="text-sm uppercase tracking-[0.3em] text-slate-500">Блог</p>
-        <h1 className="mt-3 font-serif text-4xl">Полезное об организации тоя</h1>
-        <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-600">
-          Советы по выбору тойханы, ценам и подготовке к свадьбе, дню рождения и другим торжествам в Казахстане.
-        </p>
+        <p className="text-sm uppercase tracking-[0.3em] text-slate-500">{t('blog.eyebrow')}</p>
+        <h1 className="mt-3 font-serif text-4xl">{t('blog.title')}</h1>
+        <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-600">{t('blog.intro')}</p>
       </section>
 
       {posts.length ? (
@@ -54,16 +55,16 @@ export function BlogPage() {
                 ) : null}
               </div>
               <div className="space-y-2 p-6">
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{formatDate(post.publishedAt)}</p>
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{formatDate(post.publishedAt, dateLocale)}</p>
                 <h2 className="font-serif text-2xl leading-snug">{post.title}</h2>
                 {post.excerpt ? <p className="text-sm leading-6 text-slate-600">{post.excerpt}</p> : null}
-                <span className="inline-block pt-1 text-sm font-medium text-primary group-hover:underline">Читать →</span>
+                <span className="inline-block pt-1 text-sm font-medium text-primary group-hover:underline">{t('blog.read')}</span>
               </div>
             </Link>
           ))}
         </div>
       ) : (
-        <EmptyState title="Статей пока нет" text="Загляните позже — мы готовим полезные материалы." />
+        <EmptyState title={t('blog.empty')} text={t('blog.emptyText')} />
       )}
     </main>
   );

@@ -1,5 +1,6 @@
 import { FormEvent } from 'react';
 import type { City } from '../types';
+import { useI18n } from '../i18n';
 
 export interface OwnerApplicationPayload {
   name: string;
@@ -13,8 +14,8 @@ export interface OwnerApplicationPayload {
 export function OwnerApplicationForm({
   cities,
   onSubmit,
-  submitLabel = 'Отправить заявку',
-  title = 'Оставьте заявку',
+  submitLabel,
+  title,
   description
 }: {
   cities: City[];
@@ -23,6 +24,7 @@ export function OwnerApplicationForm({
   title?: string;
   description?: string;
 }) {
+  const { t, loc } = useI18n();
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = event.currentTarget;
@@ -41,31 +43,31 @@ export function OwnerApplicationForm({
   return (
     <form onSubmit={submit} className="space-y-4 rounded-[1.75rem] bg-card p-6 shadow-soft">
       <div>
-        <h3 className="font-serif text-2xl">{title}</h3>
+        <h3 className="font-serif text-2xl">{title ?? t('owner.page.formTitle')}</h3>
         {description ? <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p> : null}
       </div>
-      <input name="name" required placeholder="Ваше имя" className="w-full rounded-2xl border border-slate-200 px-4 py-3" />
+      <input name="name" required placeholder={t('ownerForm.name')} className="w-full rounded-2xl border border-slate-200 px-4 py-3" />
       <select name="city" required defaultValue="" className="w-full rounded-2xl border border-slate-200 px-4 py-3">
         <option value="" disabled>
-          Выберите город
+          {t('ownerForm.selectCity')}
         </option>
         {cities.map((city) => (
           <option key={city.id} value={city.nameRu}>
-            {city.nameRu}
+            {loc(city.nameRu, city.nameKk)}
           </option>
         ))}
       </select>
-      <input name="hallName" placeholder="Название зала" className="w-full rounded-2xl border border-slate-200 px-4 py-3" />
-      <input name="phone" required placeholder="Телефон" className="w-full rounded-2xl border border-slate-200 px-4 py-3" />
-      <input name="whatsapp" placeholder="WhatsApp" className="w-full rounded-2xl border border-slate-200 px-4 py-3" />
+      <input name="hallName" placeholder={t('ownerForm.hallName')} className="w-full rounded-2xl border border-slate-200 px-4 py-3" />
+      <input name="phone" required placeholder={t('ownerForm.phone')} className="w-full rounded-2xl border border-slate-200 px-4 py-3" />
+      <input name="whatsapp" placeholder={t('ownerForm.whatsapp')} className="w-full rounded-2xl border border-slate-200 px-4 py-3" />
       <textarea
         name="message"
         rows={4}
-        placeholder="Коротко расскажите о зале или задаче"
+        placeholder={t('ownerForm.message')}
         className="w-full rounded-2xl border border-slate-200 px-4 py-3"
       />
       <button type="submit" className="rounded-full bg-primary px-5 py-3 font-semibold text-white">
-        {submitLabel}
+        {submitLabel ?? t('ownerForm.submit')}
       </button>
     </form>
   );

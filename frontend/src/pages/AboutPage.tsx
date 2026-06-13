@@ -1,8 +1,10 @@
 import { HowItWorks, OwnerCTA, TrustStats, Seo } from '../components';
 import { useQuery } from '@tanstack/react-query';
 import { getCities, getFeaturedToikhanas } from '../api/client';
+import { useI18n } from '../i18n';
 
 export function AboutPage() {
+  const { t } = useI18n();
   const citiesQuery = useQuery({ queryKey: ['about', 'cities'], queryFn: getCities });
   const featuredQuery = useQuery({ queryKey: ['about', 'featured'], queryFn: getFeaturedToikhanas });
   const toikhanasCount = citiesQuery.data?.reduce((sum, city) => sum + city.toikhanaCount, 0) ?? 0;
@@ -15,12 +17,9 @@ export function AboutPage() {
         path="/about"
       />
       <section className="rounded-[2rem] bg-white p-8 shadow-soft">
-        <p className="text-sm uppercase tracking-[0.3em] text-slate-500">О проекте</p>
-        <h1 className="mt-3 font-serif text-4xl">Каталог тойхан для Казахстана</h1>
-        <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-600">
-          Мы делаем понятный каталог залов для тоя: быстрый поиск, карточки с фото, фильтры,
-          заявки и отдельный поток для владельцев.
-        </p>
+        <p className="text-sm uppercase tracking-[0.3em] text-slate-500">{t('about.eyebrow')}</p>
+        <h1 className="mt-3 font-serif text-4xl">{t('about.title')}</h1>
+        <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-600">{t('about.text')}</p>
       </section>
       <TrustStats
         cities={citiesQuery.data ?? []}

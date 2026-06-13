@@ -49,12 +49,10 @@ services:
         HTTPS_PROXY: ${HTTPS_PROXY}
         http_proxy: ${http_proxy}
         https_proxy: ${https_proxy}
-    environment:
-      BACKEND_ORIGIN: http://backend:8080
     depends_on:
       - backend
     ports:
-      - "5174:5173"
+      - "5174:80"
 
 volumes:
   postgres_data:

@@ -1,4 +1,7 @@
-FROM node:20-alpine
+# Build the frontend (client bundle + SSR bundle + prerendered static HTML),
+# then serve the static output with nginx. Replaces running the Vite dev server
+# in production, which left crawlers with an empty SPA shell.
+FROM node:20-alpine AS build
 ARG HTTP_PROXY
 ARG HTTPS_PROXY
 ARG http_proxy
@@ -11,5 +14,9 @@ WORKDIR /app
 COPY package.json ./
 RUN npm install
 COPY . .
-EXPOSE 5173
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+RUN npm run build
+
+FROM nginx:1.27-alpine
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/dist /usr/share/nginx/html
+EXPOSE 80

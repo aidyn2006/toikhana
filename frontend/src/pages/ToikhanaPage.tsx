@@ -14,8 +14,10 @@ import {
   canonicalUrl
 } from '../components';
 import { getSimilarToikhanas, getToikhana, submitBooking } from '../api/client';
+import { useI18n } from '../i18n';
 
 export function ToikhanaPage() {
+  const { t, loc } = useI18n();
   const { slug = '' } = useParams();
   const queryClient = useQueryClient();
   const itemQuery = useQuery({ queryKey: ['toikhana', slug], queryFn: () => getToikhana(slug), enabled: Boolean(slug) });
@@ -73,9 +75,9 @@ export function ToikhanaPage() {
           <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
             <div className="space-y-6">
               <ToikhanaInfo item={item} />
-              <Description title="Описание" body={item.descriptionRu} />
+              <Description title={t('toikhana.descTitle')} body={loc(item.descriptionRu, item.descriptionKk)} />
               <div className="rounded-[1.75rem] bg-card p-6 shadow-soft">
-                <h3 className="font-serif text-2xl">Типы тоя</h3>
+                <h3 className="font-serif text-2xl">{t('toikhana.typesTitle')}</h3>
                 <div className="mt-4">
                   <ToyTypeBadges toyTypes={item.toyTypes} />
                 </div>

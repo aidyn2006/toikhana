@@ -9,6 +9,11 @@ const backend = process.env.BACKEND_ORIGIN ?? 'http://localhost:8080';
 
 export default defineConfig({
   plugins: [react()],
+  // Bundle the CommonJS-only helmet lib into the SSR bundle so the prerender
+  // step (Node ESM) can import it without named-export errors.
+  ssr: {
+    noExternal: ['react-helmet-async']
+  },
   server: {
     allowedHosts: [
       'toikhan.kz',
