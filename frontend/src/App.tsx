@@ -9,6 +9,7 @@ import { ContactsPage } from './pages/ContactsPage';
 import { AddToikhanaPage } from './pages/AddToikhanaPage';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
+import { AccountPage } from './pages/AccountPage';
 import { BlogPage } from './pages/BlogPage';
 import { BlogPostPage } from './pages/BlogPostPage';
 import { getCities } from './api/client';
@@ -31,6 +32,7 @@ export function App() {
         <Route path="/add-toikhana" element={<AddToikhanaPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/account" element={<AccountPage />} />
         <Route path="/blog" element={<BlogPage />} />
         <Route path="/blog/:slug" element={<BlogPostPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />

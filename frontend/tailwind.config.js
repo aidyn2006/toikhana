@@ -4,9 +4,11 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: '#1A1A2E',
-        accent: '#E8B86D',
-        background: '#F8F5F0',
+        primary: '#15463F',
+        'primary-dark': '#0F3530',
+        accent: '#C8A45A',
+        'accent-soft': '#E3CC97',
+        background: '#F4EFE6',
         card: '#FFFFFF'
       },
       fontFamily: {
@@ -14,7 +16,7 @@ export default {
         sans: ['Inter', 'system-ui', 'sans-serif']
       },
       boxShadow: {
-        soft: '0 20px 40px rgba(26,26,46,0.08)'
+        soft: '0 20px 40px rgba(21,70,63,0.10)'
       }
     }
   },

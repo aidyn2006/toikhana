@@ -22,10 +22,14 @@ toikhana:
   admin:
     username: admin
     password: admin123
+  jwt:
+    secret: ${JWT_SECRET:change-me-please-toikhana-super-secret-key-32b-min}
+    # token lifetime in milliseconds (default 7 days)
+    expiration-ms: ${JWT_EXPIRATION_MS:604800000}
   storage:
     upload-dir: uploads
   site:
-    base-url: ${SITE_BASE_URL:https://toikhan.kz}
+    base-url: ${SITE_BASE_URL:https://toikhana.kz}
 
 ---
 spring:

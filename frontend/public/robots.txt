@@ -3,4 +3,4 @@ Allow: /
 Disallow: /admin
 Disallow: /api/
 
-Sitemap: https://toikhan.kz/sitemap.xml
+Sitemap: https://toikhana.kz/sitemap.xml

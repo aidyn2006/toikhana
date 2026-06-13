@@ -1,4 +1,4 @@
-import type { BlogPost, Booking, City, OwnerApplication, Toikhana, ToikhanaCard } from '../types';
+import type { AuthResponse, BlogPost, Booking, City, OwnerApplication, Toikhana, ToikhanaCard } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '';
 
@@ -6,6 +6,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...((init?.headers as Record<string, string>) ?? {}),
+    ...getUserAuthHeader(),
     ...getAdminAuthHeader()
   };
   const response = await fetch(`${API_BASE}${path}`, {
@@ -32,6 +33,39 @@ export function setAdminAuth(username: string, password: string) {
 
 export function clearAdminAuth() {
   localStorage.removeItem('toikhana.adminAuth');
+}
+
+const TOKEN_KEY = 'toikhana.token';
+
+function getUserAuthHeader(): Record<string, string> {
+  const token = localStorage.getItem(TOKEN_KEY);
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+export function getStoredToken(): string | null {
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+export function setUserToken(token: string) {
+  localStorage.setItem(TOKEN_KEY, token);
+}
+
+export function clearUserToken() {
+  localStorage.removeItem(TOKEN_KEY);
+}
+
+export function registerUser(payload: { name: string; email: string; phone?: string; password: string }) {
+  return request<AuthResponse>('/api/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+export function loginUser(payload: { email: string; password: string }) {
+  return request<AuthResponse>('/api/auth/login', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
 }
 
 export function getCities() {

@@ -68,6 +68,19 @@ export interface BlogPost {
   publishedAt?: string;
 }
 
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+  phone?: string;
+  role: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: User;
+}
+
 export interface OwnerApplication {
   id?: number;
   name: string;
