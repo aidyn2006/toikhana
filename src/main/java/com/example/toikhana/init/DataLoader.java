@@ -3,7 +3,6 @@ package com.example.toikhana.init;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.List;
 
 import com.example.toikhana.model.BlogPost;
 import com.example.toikhana.model.City;
@@ -19,8 +18,19 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Seeds reference data. Every step is idempotent (insert-if-missing by slug), so
+ * it both bootstraps a fresh database and tops up older databases that were
+ * seeded with fewer cities/halls — without wiping anything.
+ */
 @Component
 public class DataLoader implements CommandLineRunner {
+
+    private static final String[] STOCK_PHOTOS = {
+            "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=1200&q=80",
+            "https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&w=1200&q=80",
+            "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=1200&q=80"
+    };
 
     private final CityRepository cityRepository;
     private final ToyTypeRepository toyTypeRepository;
@@ -43,123 +53,131 @@ public class DataLoader implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) {
-        if (cityRepository.count() > 0 || toikhanaRepository.count() > 0) {
-            return;
-        }
-
         // Республикалық маңызы бар қалалар мен барлық облыс орталықтары
-        List<City> cities = cityRepository.saveAll(Arrays.asList(
-                city("Астана", "Астана", "astana"),
-                city("Алматы", "Алматы", "almaty"),
-                city("Шымкент", "Шымкент", "shymkent"),
-                city("Қарағанды", "Караганда", "karaganda"),
-                city("Ақтөбе", "Актобе", "aktobe"),
-                city("Тараз", "Тараз", "taraz"),
-                city("Павлодар", "Павлодар", "pavlodar"),
-                city("Өскемен", "Усть-Каменогорск", "ust-kamenogorsk"),
-                city("Семей", "Семей", "semey"),
-                city("Атырау", "Атырау", "atyrau"),
-                city("Қостанай", "Костанай", "kostanay"),
-                city("Қызылорда", "Кызылорда", "kyzylorda"),
-                city("Орал", "Уральск", "uralsk"),
-                city("Петропавл", "Петропавловск", "petropavlovsk"),
-                city("Ақтау", "Актау", "aktau"),
-                city("Теміртау", "Темиртау", "temirtau"),
-                city("Түркістан", "Туркестан", "turkestan"),
-                city("Көкшетау", "Кокшетау", "kokshetau"),
-                city("Талдықорған", "Талдыкорган", "taldykorgan"),
-                city("Екібастұз", "Экибастуз", "ekibastuz"),
-                city("Рудный", "Рудный", "rudny"),
-                city("Жезқазған", "Жезказган", "zhezkazgan"),
-                city("Қонаев", "Конаев", "konaev")
-        ));
-        City astana = cities.get(0);
-        City almaty = cities.get(1);
-        City shymkent = cities.get(2);
-        City karaganda = cities.get(3);
-        City aktobe = cities.get(4);
-        City atyrau = cities.get(9);
+        ensureCity("Астана", "Астана", "astana");
+        ensureCity("Алматы", "Алматы", "almaty");
+        ensureCity("Шымкент", "Шымкент", "shymkent");
+        ensureCity("Қарағанды", "Караганда", "karaganda");
+        ensureCity("Ақтөбе", "Актобе", "aktobe");
+        ensureCity("Тараз", "Тараз", "taraz");
+        ensureCity("Павлодар", "Павлодар", "pavlodar");
+        ensureCity("Өскемен", "Усть-Каменогорск", "ust-kamenogorsk");
+        ensureCity("Семей", "Семей", "semey");
+        ensureCity("Атырау", "Атырау", "atyrau");
+        ensureCity("Қостанай", "Костанай", "kostanay");
+        ensureCity("Қызылорда", "Кызылорда", "kyzylorda");
+        ensureCity("Орал", "Уральск", "uralsk");
+        ensureCity("Петропавл", "Петропавловск", "petropavlovsk");
+        ensureCity("Ақтау", "Актау", "aktau");
+        ensureCity("Теміртау", "Темиртау", "temirtau");
+        ensureCity("Түркістан", "Туркестан", "turkestan");
+        ensureCity("Көкшетау", "Кокшетау", "kokshetau");
+        ensureCity("Талдықорған", "Талдыкорган", "taldykorgan");
+        ensureCity("Екібастұз", "Экибастуз", "ekibastuz");
+        ensureCity("Рудный", "Рудный", "rudny");
+        ensureCity("Жезқазған", "Жезказган", "zhezkazgan");
+        ensureCity("Қонаев", "Конаев", "konaev");
 
-        ToyType wedding = toyType("Үйлену тойы", "Свадьба", "svadba", "rings");
-        ToyType khatyn = toyType("Құдалық", "Сватовство", "kudalyk", "people");
-        ToyType birthday = toyType("Туған күн", "День рождения", "birthday", "cake");
-        ToyType corporate = toyType("Корпоратив", "Корпоратив", "corporate", "briefcase");
-        toyTypeRepository.saveAll(Arrays.asList(wedding, khatyn, birthday, corporate));
+        ToyType wedding = ensureToyType("Үйлену тойы", "Свадьба", "svadba", "rings");
+        ToyType kudalyk = ensureToyType("Құдалық", "Сватовство", "kudalyk", "people");
+        ToyType birthday = ensureToyType("Туған күн", "День рождения", "birthday", "cake");
+        ToyType corporate = ensureToyType("Корпоратив", "Корпоратив", "corporate", "briefcase");
 
-        createToikhana(astana, "Aq Orda Hall", "aq-orda-hall", 80, 300, 120000, 450000,
-                true, true, wedding, khatyn);
-        createToikhana(astana, "Royal Garden", "royal-garden", 60, 220, 90000, 320000,
-                true, true, wedding, birthday);
-        createToikhana(almaty, "Dala Palace", "dala-palace", 100, 500, 180000, 600000,
-                true, true, wedding, corporate);
-        createToikhana(almaty, "Samal Sarai", "samal-sarai", 50, 180, 80000, 250000,
-                true, false, khatyn, birthday);
-        createToikhana(shymkent, "Turkistan Hall", "turkistan-hall", 70, 260, 95000, 290000,
-                true, true, wedding, khatyn);
-        createToikhana(shymkent, "Shanyrak Premium", "shanyrak-premium", 120, 400, 200000, 700000,
-                true, false, wedding, corporate, birthday);
-        createToikhana(karaganda, "Saryarka Hall", "saryarka-hall", 80, 350, 110000, 380000,
-                true, true, wedding, corporate);
-        createToikhana(karaganda, "Altyn Toi", "altyn-toi", 60, 200, 85000, 240000,
-                true, false, wedding, birthday);
-        createToikhana(aktobe, "Aktobe Palace", "aktobe-palace", 90, 320, 100000, 350000,
-                true, true, wedding, khatyn);
-        createToikhana(atyrau, "Caspian Hall", "caspian-hall", 70, 280, 130000, 420000,
-                true, true, wedding, corporate);
+        // Каталог: барлық ірі қалаларда залдар (catalog spread across all major cities)
+        ensureToikhana("astana", "Aq Orda Hall", "aq-orda-hall", 80, 300, 120000, 450000, true, wedding, kudalyk);
+        ensureToikhana("astana", "Royal Garden", "royal-garden", 60, 220, 90000, 320000, true, wedding, birthday);
+        ensureToikhana("astana", "Astana Grand Hall", "astana-grand-hall", 150, 600, 220000, 800000, true, wedding, corporate);
+        ensureToikhana("almaty", "Dala Palace", "dala-palace", 100, 500, 180000, 600000, true, wedding, corporate);
+        ensureToikhana("almaty", "Samal Sarai", "samal-sarai", 50, 180, 80000, 250000, false, kudalyk, birthday);
+        ensureToikhana("almaty", "Alatau Premium", "alatau-premium", 120, 450, 200000, 700000, true, wedding, corporate);
+        ensureToikhana("shymkent", "Turkistan Hall", "turkistan-hall", 70, 260, 95000, 290000, true, wedding, kudalyk);
+        ensureToikhana("shymkent", "Shanyrak Premium", "shanyrak-premium", 120, 400, 200000, 700000, false, wedding, corporate, birthday);
+        ensureToikhana("karaganda", "Saryarka Hall", "saryarka-hall", 80, 350, 110000, 380000, true, wedding, corporate);
+        ensureToikhana("karaganda", "Altyn Toi", "altyn-toi", 60, 200, 85000, 240000, false, wedding, birthday);
+        ensureToikhana("aktobe", "Aktobe Palace", "aktobe-palace", 90, 320, 100000, 350000, true, wedding, kudalyk);
+        ensureToikhana("aktobe", "Aliya Hall", "aliya-hall", 50, 180, 75000, 220000, false, birthday, kudalyk);
+        ensureToikhana("atyrau", "Caspian Hall", "caspian-hall", 70, 280, 130000, 420000, true, wedding, corporate);
+        ensureToikhana("taraz", "Taraz Sarai", "taraz-sarai", 60, 250, 90000, 300000, true, wedding, kudalyk);
+        ensureToikhana("pavlodar", "Ertis Hall", "ertis-hall", 70, 260, 95000, 310000, true, wedding, corporate);
+        ensureToikhana("ust-kamenogorsk", "Altai Palace", "altai-palace", 80, 300, 100000, 340000, true, wedding, birthday);
+        ensureToikhana("semey", "Abai Hall", "abai-hall", 60, 220, 85000, 270000, true, wedding, kudalyk);
+        ensureToikhana("kostanay", "Tobol Sarai", "tobol-sarai", 70, 240, 90000, 290000, true, wedding, corporate);
+        ensureToikhana("kyzylorda", "Syrdariya Hall", "syrdariya-hall", 60, 230, 85000, 260000, true, wedding, kudalyk);
+        ensureToikhana("uralsk", "Oral Premium", "oral-premium", 80, 300, 100000, 330000, true, wedding, corporate);
+        ensureToikhana("petropavlovsk", "Qyzyljar Hall", "qyzyljar-hall", 60, 220, 85000, 250000, true, wedding, birthday);
+        ensureToikhana("aktau", "Aktau Marine Hall", "aktau-marine-hall", 90, 350, 140000, 460000, true, wedding, corporate);
+        ensureToikhana("temirtau", "Metallurg Hall", "metallurg-hall", 60, 240, 80000, 250000, true, wedding, corporate);
+        ensureToikhana("turkestan", "Azret Sultan Sarai", "azret-sultan-sarai", 100, 400, 120000, 380000, true, wedding, kudalyk);
+        ensureToikhana("kokshetau", "Burabai Hall", "burabai-hall", 70, 260, 95000, 300000, true, wedding, birthday);
+        ensureToikhana("taldykorgan", "Jetisu Sarai", "jetisu-sarai", 60, 230, 85000, 270000, true, wedding, kudalyk);
+        ensureToikhana("ekibastuz", "Energetik Hall", "energetik-hall", 50, 200, 75000, 220000, true, wedding, corporate);
+        ensureToikhana("rudny", "Rudny Palace", "rudny-palace", 50, 190, 70000, 210000, true, wedding, birthday);
+        ensureToikhana("zhezkazgan", "Ulytau Hall", "ulytau-hall", 60, 220, 80000, 240000, true, wedding, kudalyk);
+        ensureToikhana("konaev", "Balqash Hall", "balqash-hall", 70, 280, 100000, 320000, true, wedding, corporate);
 
         recalcCityCounts();
         seedBlogPosts();
     }
 
-    private City city(String nameKk, String nameRu, String slug) {
-        City city = new City();
-        city.setNameKk(nameKk);
-        city.setNameRu(nameRu);
-        city.setSlug(slug);
-        return city;
+    private City ensureCity(String nameKk, String nameRu, String slug) {
+        return cityRepository.findBySlug(slug).orElseGet(() -> {
+            City city = new City();
+            city.setNameKk(nameKk);
+            city.setNameRu(nameRu);
+            city.setSlug(slug);
+            return cityRepository.save(city);
+        });
     }
 
-    private ToyType toyType(String nameKk, String nameRu, String slug, String icon) {
-        ToyType toyType = new ToyType();
-        toyType.setNameKk(nameKk);
-        toyType.setNameRu(nameRu);
-        toyType.setSlug(slug);
-        toyType.setIcon(icon);
-        return toyType;
+    private ToyType ensureToyType(String nameKk, String nameRu, String slug, String icon) {
+        return toyTypeRepository.findBySlug(slug).orElseGet(() -> {
+            ToyType toyType = new ToyType();
+            toyType.setNameKk(nameKk);
+            toyType.setNameRu(nameRu);
+            toyType.setSlug(slug);
+            toyType.setIcon(icon);
+            return toyTypeRepository.save(toyType);
+        });
     }
 
-    private void createToikhana(City city,
+    private void ensureToikhana(String citySlug,
                                 String name,
                                 String slug,
                                 int minCapacity,
                                 int maxCapacity,
                                 int minPrice,
                                 int maxPrice,
-                                boolean active,
                                 boolean featured,
                                 ToyType... toyTypes) {
+        if (toikhanaRepository.findBySlug(slug).isPresent()) {
+            return;
+        }
+        City city = cityRepository.findBySlug(citySlug).orElse(null);
+        if (city == null) {
+            return;
+        }
         Toikhana toikhana = new Toikhana();
         toikhana.setCityId(city.getId());
         toikhana.setName(name);
         toikhana.setSlug(slug);
-        toikhana.setDescriptionKk(name + " - той өткізуге арналған жайлы зал.");
-        toikhana.setDescriptionRu(name + " - уютный зал для проведения тоя.");
-        toikhana.setAddress(city.getNameRu() + ", орталық аудан");
+        toikhana.setDescriptionKk(name + " — той өткізуге арналған жайлы зал. Заманауи интерьер, дәмді ас және сапалы қызмет.");
+        toikhana.setDescriptionRu(name + " — уютный зал для проведения тоя. Современный интерьер, вкусная кухня и сервис.");
+        toikhana.setAddress(city.getNameRu() + ", центральный район");
         toikhana.setPhone("+7 (700) 000-00-00");
         toikhana.setWhatsapp("+77000000000");
         toikhana.setCapacityMin(minCapacity);
         toikhana.setCapacityMax(maxCapacity);
         toikhana.setPriceMin(minPrice);
         toikhana.setPriceMax(maxPrice);
-        toikhana.setActive(active);
+        toikhana.setActive(true);
         toikhana.setFeatured(featured);
         toikhana.setCreatedAt(LocalDateTime.now().minusDays(10));
         toikhana.setToyTypes(new HashSet<ToyType>(Arrays.asList(toyTypes)));
         Toikhana saved = toikhanaRepository.save(toikhana);
 
-        photoRepository.save(photo(saved.getId(), "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=1200&q=80", true, 1));
-        photoRepository.save(photo(saved.getId(), "https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&w=1200&q=80", false, 2));
-        photoRepository.save(photo(saved.getId(), "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=1200&q=80", false, 3));
+        for (int i = 0; i < STOCK_PHOTOS.length; i++) {
+            photoRepository.save(photo(saved.getId(), STOCK_PHOTOS[i], i == 0, i + 1));
+        }
     }
 
     private ToikhanaPhoto photo(Long toikhanaId, String url, boolean main, int sortOrder) {
@@ -172,7 +190,7 @@ public class DataLoader implements CommandLineRunner {
     }
 
     private void recalcCityCounts() {
-        List<Toikhana> all = toikhanaRepository.findAll();
+        java.util.List<Toikhana> all = toikhanaRepository.findAll();
         for (City city : cityRepository.findAll()) {
             int count = 0;
             for (Toikhana toikhana : all) {

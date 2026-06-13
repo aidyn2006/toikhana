@@ -269,6 +269,7 @@ export function Hero({
   onCityChange: (slug: string) => void;
 }) {
   const { t, loc } = useI18n();
+  const totalHalls = cities.reduce((sum, city) => sum + city.toikhanaCount, 0);
   return (
     <section className="relative overflow-hidden rounded-[2rem] bg-primary px-6 py-12 text-white shadow-soft md:px-10 md:py-16">
       <div className="absolute inset-0 opacity-25 [background:radial-gradient(circle_at_top_right,_#C8A45A_0,_transparent_38%),radial-gradient(circle_at_bottom_left,_#E3CC97_0,_transparent_26%)]" />
@@ -301,11 +302,15 @@ export function Hero({
               </option>
             ))}
           </select>
-          <div className="mt-5 grid grid-cols-2 gap-3 text-sm text-white/80">
-            <div className="rounded-2xl bg-white/10 p-4">{t('hero.feature.search')}</div>
-            <div className="rounded-2xl bg-white/10 p-4">{t('hero.feature.fast')}</div>
-            <div className="rounded-2xl bg-white/10 p-4">{t('hero.feature.call')}</div>
-            <div className="rounded-2xl bg-white/10 p-4">{cities.length}+ {t('hero.feature.cities')}</div>
+          <div className="mt-5 grid grid-cols-2 gap-3">
+            <div className="rounded-2xl bg-white/10 p-4">
+              <div className="font-serif text-3xl leading-none text-white">{cities.length}</div>
+              <div className="mt-1 text-xs text-white/70">{t('trust.cities')}</div>
+            </div>
+            <div className="rounded-2xl bg-white/10 p-4">
+              <div className="font-serif text-3xl leading-none text-white">{totalHalls}</div>
+              <div className="mt-1 text-xs text-white/70">{t('trust.toikhanas')}</div>
+            </div>
           </div>
         </div>
       </div>

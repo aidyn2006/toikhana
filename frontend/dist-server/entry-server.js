@@ -1675,6 +1675,7 @@ function Hero({
   onCityChange
 }) {
   const { t, loc } = useI18n();
+  const totalHalls = cities.reduce((sum, city) => sum + city.toikhanaCount, 0);
   return /* @__PURE__ */ jsxs("section", { className: "relative overflow-hidden rounded-[2rem] bg-primary px-6 py-12 text-white shadow-soft md:px-10 md:py-16", children: [
     /* @__PURE__ */ jsx("div", { className: "absolute inset-0 opacity-25 [background:radial-gradient(circle_at_top_right,_#C8A45A_0,_transparent_38%),radial-gradient(circle_at_bottom_left,_#E3CC97_0,_transparent_26%)]" }),
     /* @__PURE__ */ jsxs("div", { className: "relative grid gap-8 md:grid-cols-[1.25fr_0.75fr] md:items-center", children: [
@@ -1702,14 +1703,14 @@ function Hero({
             ]
           }
         ),
-        /* @__PURE__ */ jsxs("div", { className: "mt-5 grid grid-cols-2 gap-3 text-sm text-white/80", children: [
-          /* @__PURE__ */ jsx("div", { className: "rounded-2xl bg-white/10 p-4", children: t("hero.feature.search") }),
-          /* @__PURE__ */ jsx("div", { className: "rounded-2xl bg-white/10 p-4", children: t("hero.feature.fast") }),
-          /* @__PURE__ */ jsx("div", { className: "rounded-2xl bg-white/10 p-4", children: t("hero.feature.call") }),
+        /* @__PURE__ */ jsxs("div", { className: "mt-5 grid grid-cols-2 gap-3", children: [
           /* @__PURE__ */ jsxs("div", { className: "rounded-2xl bg-white/10 p-4", children: [
-            cities.length,
-            "+ ",
-            t("hero.feature.cities")
+            /* @__PURE__ */ jsx("div", { className: "font-serif text-3xl leading-none text-white", children: cities.length }),
+            /* @__PURE__ */ jsx("div", { className: "mt-1 text-xs text-white/70", children: t("trust.cities") })
+          ] }),
+          /* @__PURE__ */ jsxs("div", { className: "rounded-2xl bg-white/10 p-4", children: [
+            /* @__PURE__ */ jsx("div", { className: "font-serif text-3xl leading-none text-white", children: totalHalls }),
+            /* @__PURE__ */ jsx("div", { className: "mt-1 text-xs text-white/70", children: t("trust.toikhanas") })
           ] })
         ] })
       ] })
@@ -2363,19 +2364,20 @@ function CityPage() {
   ] });
 }
 function HomePage() {
-  var _a2, _b2, _c;
+  var _a2;
   const navigate = useNavigate();
+  const { t } = useI18n();
   const citiesQuery = useQuery({ queryKey: ["cities"], queryFn: getCities });
   const featuredQuery = useQuery({ queryKey: ["featured"], queryFn: getFeaturedToikhanas });
   const toyTypes = useMemo(
     () => [
       { id: 1, nameRu: "Свадьба", nameKk: "Үйлену тойы", slug: "svadba" },
-      { id: 2, nameRu: "День рождения", nameKk: "Туған күн", slug: "birthday" },
-      { id: 3, nameRu: "Корпоратив", nameKk: "Корпоратив", slug: "corporate" }
+      { id: 2, nameRu: "Сватовство", nameKk: "Құдалық", slug: "kudalyk" },
+      { id: 3, nameRu: "День рождения", nameKk: "Туған күн", slug: "birthday" },
+      { id: 4, nameRu: "Корпоратив", nameKk: "Корпоратив", slug: "corporate" }
     ],
     []
   );
-  const toikhanasCount = ((_a2 = citiesQuery.data) == null ? void 0 : _a2.reduce((sum, city) => sum + city.toikhanaCount, 0)) ?? 0;
   return /* @__PURE__ */ jsxs("main", { className: "mx-auto max-w-7xl space-y-12 px-4 py-6 md:px-8 md:py-10", children: [
     /* @__PURE__ */ jsx(
       Seo,
@@ -2396,31 +2398,21 @@ function HomePage() {
         }
       }
     ),
-    /* @__PURE__ */ jsx(
-      TrustStats,
-      {
-        cities: citiesQuery.data ?? [],
-        toikhanasCount,
-        featuredCount: ((_b2 = featuredQuery.data) == null ? void 0 : _b2.filter((item) => item.featured).length) ?? 0
-      }
-    ),
+    ((_a2 = featuredQuery.data) == null ? void 0 : _a2.length) ? /* @__PURE__ */ jsx(FeaturedToikhanas, { items: featuredQuery.data }) : null,
+    /* @__PURE__ */ jsx(CityCards, { cities: citiesQuery.data ?? [] }),
+    /* @__PURE__ */ jsx(ToyTypes, { toyTypes }),
     /* @__PURE__ */ jsx(HowItWorks, {}),
-    /* @__PURE__ */ jsx(OwnerCTA, {}),
-    /* @__PURE__ */ jsxs("div", { className: "space-y-6", children: [
-      /* @__PURE__ */ jsx(CityCards, { cities: citiesQuery.data ?? [] }),
-      ((_c = featuredQuery.data) == null ? void 0 : _c.length) ? /* @__PURE__ */ jsx(FeaturedToikhanas, { items: featuredQuery.data ?? [] }) : /* @__PURE__ */ jsx(EmptyState, { title: "Залы загружаются", text: "Если API отвечает медленно, секция появится после загрузки данных." }),
-      /* @__PURE__ */ jsx(ToyTypes, { toyTypes }),
-      /* @__PURE__ */ jsx(FAQ, {}),
-      /* @__PURE__ */ jsxs("section", { className: "flex flex-wrap items-center justify-between gap-4 rounded-[1.75rem] bg-card p-6 shadow-soft", children: [
-        /* @__PURE__ */ jsxs("div", { children: [
-          /* @__PURE__ */ jsx("p", { className: "text-sm uppercase tracking-[0.3em] text-slate-500", children: "Блог" }),
-          /* @__PURE__ */ jsx("h2", { className: "font-serif text-3xl", children: "Советы по организации тоя" }),
-          /* @__PURE__ */ jsx("p", { className: "mt-2 max-w-xl text-sm leading-6 text-slate-600", children: "Как выбрать тойхану, сколько стоит свадьба и чек-листы для торжеств." })
-        ] }),
-        /* @__PURE__ */ jsx(Link, { to: "/blog", className: "rounded-full bg-primary px-6 py-3 font-semibold text-white", children: "Читать блог" })
+    /* @__PURE__ */ jsxs("section", { className: "flex flex-wrap items-center justify-between gap-4 rounded-[1.75rem] bg-card p-6 shadow-soft", children: [
+      /* @__PURE__ */ jsxs("div", { children: [
+        /* @__PURE__ */ jsx("p", { className: "text-sm uppercase tracking-[0.3em] text-slate-500", children: t("blog.eyebrow") }),
+        /* @__PURE__ */ jsx("h2", { className: "font-serif text-3xl", children: t("blog.title") }),
+        /* @__PURE__ */ jsx("p", { className: "mt-2 max-w-xl text-sm leading-6 text-slate-600", children: t("blog.intro") })
       ] }),
-      /* @__PURE__ */ jsx(SEOText, {})
-    ] })
+      /* @__PURE__ */ jsx(Link, { to: "/blog", className: "rounded-full bg-primary px-6 py-3 font-semibold text-white transition hover:bg-primary-dark", children: t("nav.blog") })
+    ] }),
+    /* @__PURE__ */ jsx(OwnerCTA, {}),
+    /* @__PURE__ */ jsx(FAQ, {}),
+    /* @__PURE__ */ jsx(SEOText, {})
   ] });
 }
 function ToikhanaPage() {
