@@ -6,7 +6,7 @@ import { jsx, jsxs, Fragment } from "react/jsx-runtime";
 import { renderToString } from "react-dom/server";
 import { StaticRouter } from "react-router-dom/server.mjs";
 import { QueryClientProvider, useQuery, useMutation, useQueryClient, QueryClient } from "@tanstack/react-query";
-import React3, { Component, createContext, useState, useEffect, useCallback, useMemo, useContext } from "react";
+import React3, { Component, createContext, useState, useEffect, useCallback, useMemo, useContext, useRef } from "react";
 import fastCompare from "react-fast-compare";
 import invariant from "invariant";
 import shallowEqual from "shallowequal";
@@ -2970,7 +2970,26 @@ function BlogPostPage() {
     ] })
   ] });
 }
+function usePageViews() {
+  const location = useLocation();
+  const firstLoad = useRef(true);
+  useEffect(() => {
+    if (firstLoad.current) {
+      firstLoad.current = false;
+      return;
+    }
+    const gtag = window.gtag;
+    if (typeof gtag === "function") {
+      gtag("event", "page_view", {
+        page_path: location.pathname + location.search,
+        page_location: window.location.href,
+        page_title: document.title
+      });
+    }
+  }, [location.pathname, location.search]);
+}
 function App() {
+  usePageViews();
   const citiesQuery = useQuery({ queryKey: ["shell", "cities"], queryFn: getCities });
   const cities = citiesQuery.data ?? [];
   return /* @__PURE__ */ jsxs("div", { className: "min-h-screen bg-background", children: [

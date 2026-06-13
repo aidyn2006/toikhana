@@ -1,4 +1,5 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect, useRef } from 'react';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { AdminPage } from './pages/AdminPage';
 import { CityPage } from './pages/CityPage';
@@ -15,7 +16,28 @@ import { BlogPostPage } from './pages/BlogPostPage';
 import { getCities } from './api/client';
 import { SiteFooter, SiteHeader } from './components';
 
+/** GA4 page_view on client-side route changes (the initial load is sent by gtag config). */
+function usePageViews() {
+  const location = useLocation();
+  const firstLoad = useRef(true);
+  useEffect(() => {
+    if (firstLoad.current) {
+      firstLoad.current = false;
+      return;
+    }
+    const gtag = (window as unknown as { gtag?: (...args: unknown[]) => void }).gtag;
+    if (typeof gtag === 'function') {
+      gtag('event', 'page_view', {
+        page_path: location.pathname + location.search,
+        page_location: window.location.href,
+        page_title: document.title
+      });
+    }
+  }, [location.pathname, location.search]);
+}
+
 export function App() {
+  usePageViews();
   const citiesQuery = useQuery({ queryKey: ['shell', 'cities'], queryFn: getCities });
   const cities = citiesQuery.data ?? [];
   return (
