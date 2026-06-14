@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.HashSet;
 
+import com.example.toikhana.model.AppUser;
 import com.example.toikhana.model.BlogPost;
 import com.example.toikhana.model.City;
 import com.example.toikhana.model.Toikhana;
@@ -14,7 +15,10 @@ import com.example.toikhana.repository.CityRepository;
 import com.example.toikhana.repository.ToikhanaPhotoRepository;
 import com.example.toikhana.repository.ToikhanaRepository;
 import com.example.toikhana.repository.ToyTypeRepository;
+import com.example.toikhana.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,17 +41,29 @@ public class DataLoader implements CommandLineRunner {
     private final ToikhanaRepository toikhanaRepository;
     private final ToikhanaPhotoRepository photoRepository;
     private final BlogPostRepository blogPostRepository;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final String adminEmail;
+    private final String adminPassword;
 
     public DataLoader(CityRepository cityRepository,
                       ToyTypeRepository toyTypeRepository,
                       ToikhanaRepository toikhanaRepository,
                       ToikhanaPhotoRepository photoRepository,
-                      BlogPostRepository blogPostRepository) {
+                      BlogPostRepository blogPostRepository,
+                      UserRepository userRepository,
+                      PasswordEncoder passwordEncoder,
+                      @Value("${toikhana.admin.email:admin@toikhana.kz}") String adminEmail,
+                      @Value("${toikhana.admin.password:admin123}") String adminPassword) {
         this.cityRepository = cityRepository;
         this.toyTypeRepository = toyTypeRepository;
         this.toikhanaRepository = toikhanaRepository;
         this.photoRepository = photoRepository;
         this.blogPostRepository = blogPostRepository;
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.adminEmail = adminEmail;
+        this.adminPassword = adminPassword;
     }
 
     @Override
@@ -117,6 +133,20 @@ public class DataLoader implements CommandLineRunner {
 
         recalcCityCounts();
         seedBlogPosts();
+        ensureAdminUser();
+    }
+
+    /** Make sure an admin account exists so /admin is reachable via normal login. */
+    private void ensureAdminUser() {
+        if (userRepository.existsByEmailIgnoreCase(adminEmail)) {
+            return;
+        }
+        AppUser admin = new AppUser();
+        admin.setName("Администратор");
+        admin.setEmail(adminEmail.toLowerCase());
+        admin.setPasswordHash(passwordEncoder.encode(adminPassword));
+        admin.setRole("ADMIN");
+        userRepository.save(admin);
     }
 
     private City ensureCity(String nameKk, String nameRu, String slug) {

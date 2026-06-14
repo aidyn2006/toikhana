@@ -168,7 +168,8 @@ export function uploadAdminToikhanaPhoto(
     method: 'POST',
     body: formData,
     headers: {
-      ...(getAdminAuthHeader())
+      ...getUserAuthHeader(),
+      ...getAdminAuthHeader()
     }
   }).then(async (response) => {
     if (!response.ok) {
@@ -202,11 +203,7 @@ export function importFrom2gis(payload: {
   if (typeof payload.maxRecords === 'number') {
     body.maxRecords = payload.maxRecords;
   }
-  // Let the parser authenticate to toikhana with the same admin credentials.
-  const adminAuth = localStorage.getItem('toikhana.adminAuth');
-  if (adminAuth) {
-    body.auth = atob(adminAuth);
-  }
+  // The parser authenticates to toikhana itself (built-in admin Basic auth).
   return fetch(`${PARSER_BASE}/import`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
