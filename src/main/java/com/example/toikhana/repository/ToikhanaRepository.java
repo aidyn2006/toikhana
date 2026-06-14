@@ -9,6 +9,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface ToikhanaRepository extends JpaRepository<Toikhana, Long> {
     Optional<Toikhana> findBySlug(String slug);
 
+    Optional<Toikhana> findFirstBySource2gisId(String source2gisId);
+
     List<Toikhana> findByFeaturedTrueAndActiveTrueOrderByCreatedAtDesc();
 
     List<Toikhana> findByCityIdAndActiveTrueOrderByFeaturedDescCreatedAtDesc(Long cityId);

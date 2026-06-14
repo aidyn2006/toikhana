@@ -10,6 +10,7 @@ import javax.validation.Valid;
 import com.example.toikhana.dto.AdminBookingStatusRequest;
 import com.example.toikhana.dto.AdminToikhanaRequest;
 import com.example.toikhana.dto.BookingDto;
+import com.example.toikhana.dto.ImportRequest;
 import com.example.toikhana.dto.PhotoDto;
 import com.example.toikhana.dto.ToikhanaDetailDto;
 import com.example.toikhana.dto.ToikhanaListItemDto;
@@ -18,6 +19,7 @@ import com.example.toikhana.repository.CityRepository;
 import com.example.toikhana.service.AdminService;
 import com.example.toikhana.service.BookingService;
 import com.example.toikhana.service.CatalogService;
+import com.example.toikhana.service.ImportService;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -37,15 +39,18 @@ public class AdminController {
     private final CatalogService catalogService;
     private final BookingService bookingService;
     private final CityRepository cityRepository;
+    private final ImportService importService;
 
     public AdminController(AdminService adminService,
                            CatalogService catalogService,
                            BookingService bookingService,
-                           CityRepository cityRepository) {
+                           CityRepository cityRepository,
+                           ImportService importService) {
         this.adminService = adminService;
         this.catalogService = catalogService;
         this.bookingService = bookingService;
         this.cityRepository = cityRepository;
+        this.importService = importService;
     }
 
     @GetMapping("/toikhanas")
@@ -82,6 +87,11 @@ public class AdminController {
                                 @RequestParam(value = "sortOrder", required = false) Integer sortOrder,
                                 @RequestPart("file") MultipartFile file) {
         return adminService.addPhoto(id, file, isMain, sortOrder);
+    }
+
+    @PostMapping("/import/2gis")
+    public Map<String, Object> import2gis(@Valid @org.springframework.web.bind.annotation.RequestBody ImportRequest request) {
+        return importService.importFrom2gis(request);
     }
 
     @GetMapping("/bookings")

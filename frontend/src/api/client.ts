@@ -2,6 +2,9 @@ import type { AuthResponse, BlogPost, Booking, City, OwnerApplication, Toikhana,
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '';
 
+// Standalone 2GIS parser service (parser-2gis: `python -m parser_2gis.integrations.toikhana --serve`).
+const PARSER_BASE = import.meta.env.VITE_PARSER_URL ?? 'http://localhost:8765';
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -173,6 +176,47 @@ export function uploadAdminToikhanaPhoto(
       throw new Error(payload.error ?? `Request failed: ${response.status}`);
     }
     return response.json();
+  });
+}
+
+export interface Import2gisResult {
+  parsed: number;
+  sent: number;
+  toikhana: { created: number; skipped: number; photosDownloaded: number };
+}
+
+export function importFrom2gis(payload: {
+  url: string;
+  cityId: number;
+  active?: boolean;
+  withPhotos?: boolean;
+  maxRecords?: number;
+}): Promise<Import2gisResult> {
+  const body: Record<string, unknown> = {
+    url: payload.url,
+    cityId: payload.cityId,
+    active: payload.active ?? true,
+    withPhotos: payload.withPhotos ?? true,
+    toikhanaUrl: API_BASE || 'http://localhost:8080'
+  };
+  if (typeof payload.maxRecords === 'number') {
+    body.maxRecords = payload.maxRecords;
+  }
+  // Let the parser authenticate to toikhana with the same admin credentials.
+  const adminAuth = localStorage.getItem('toikhana.adminAuth');
+  if (adminAuth) {
+    body.auth = atob(adminAuth);
+  }
+  return fetch(`${PARSER_BASE}/import`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  }).then(async (response) => {
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error ?? `Import failed: ${response.status}`);
+    }
+    return response.json() as Promise<Import2gisResult>;
   });
 }
 

@@ -32,6 +32,9 @@ public class Toikhana {
     @Column(nullable = false, unique = true, length = 200)
     private String slug;
 
+    @Column(name = "source_2gis_id", length = 100)
+    private String source2gisId;
+
     @Column(name = "description_kk", columnDefinition = "TEXT")
     private String descriptionKk;
 
@@ -106,6 +109,14 @@ public class Toikhana {
 
     public void setSlug(String slug) {
         this.slug = slug;
+    }
+
+    public String getSource2gisId() {
+        return source2gisId;
+    }
+
+    public void setSource2gisId(String source2gisId) {
+        this.source2gisId = source2gisId;
     }
 
     public String getDescriptionKk() {

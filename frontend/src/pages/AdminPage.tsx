@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { BookingList, LoginForm, PhotoUpload, ToikhanaForm } from '../components';
+import { BookingList, Import2gisForm, LoginForm, PhotoUpload, ToikhanaForm } from '../components';
 import {
   adminLogin,
   clearAdminAuth,
@@ -10,6 +10,7 @@ import {
   getAdminOwnerApplications,
   getAdminToikhanas,
   getCities,
+  importFrom2gis,
   updateOwnerApplicationStatus,
   uploadAdminToikhanaPhoto
 } from '../api/client';
@@ -49,6 +50,13 @@ export function AdminPage() {
     }) => uploadAdminToikhanaPhoto(toikhanaId, file, isMain, sortOrder),
     onSuccess: () => toikhanasQuery.refetch()
   });
+  const import2gisMutation = useMutation({
+    mutationFn: importFrom2gis,
+    onSuccess: () => {
+      toikhanasQuery.refetch();
+      citiesQuery.refetch();
+    }
+  });
   const ownerStatusMutation = useMutation({
     mutationFn: ({ id, status }: { id: number; status: string }) => updateOwnerApplicationStatus(id, status),
     onSuccess: () => ownerApplicationsQuery.refetch()
@@ -80,6 +88,15 @@ export function AdminPage() {
           <section className="grid gap-6 lg:grid-cols-2">
             <div className="space-y-4">
               <h2 className="font-serif text-3xl">Тойханы</h2>
+              <Import2gisForm
+                cities={citiesQuery.data ?? []}
+                pending={import2gisMutation.isPending}
+                result={import2gisMutation.data ?? null}
+                error={import2gisMutation.error ? (import2gisMutation.error as Error).message : null}
+                onSubmit={async (payload) => {
+                  await import2gisMutation.mutateAsync(payload);
+                }}
+              />
               <ToikhanaForm
                 onSubmit={async (payload) => {
                   await createMutation.mutateAsync(payload);

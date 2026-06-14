@@ -890,6 +890,92 @@ export function ToikhanaForm({
   );
 }
 
+export function Import2gisForm({
+  cities,
+  onSubmit,
+  pending,
+  result,
+  error
+}: {
+  cities: City[];
+  onSubmit: (payload: {
+    url: string;
+    cityId: number;
+    active: boolean;
+    withPhotos: boolean;
+    maxRecords?: number;
+  }) => Promise<void> | void;
+  pending?: boolean;
+  result?: { parsed: number; sent: number; toikhana: { created: number; skipped: number; photosDownloaded: number } } | null;
+  error?: string | null;
+}) {
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    const maxRecordsRaw = data.get('maxRecords');
+    await onSubmit({
+      url: String(data.get('url') ?? '').trim(),
+      cityId: Number(data.get('cityId') ?? 0),
+      active: data.get('active') === 'on',
+      withPhotos: data.get('withPhotos') === 'on',
+      maxRecords: maxRecordsRaw ? Number(maxRecordsRaw) : undefined
+    });
+  };
+
+  return (
+    <form onSubmit={submit} className="space-y-4 rounded-[1.75rem] bg-card p-6 shadow-soft">
+      <div>
+        <h3 className="font-serif text-2xl">Импорт из 2GIS</h3>
+        <p className="mt-1 text-sm text-slate-500">
+          Вставьте ссылку на выдачу 2GIS — организации и фотографии добавятся автоматически.
+        </p>
+      </div>
+      <input
+        name="url"
+        required
+        placeholder="https://2gis.kz/astana/search/тойхана"
+        className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-accent"
+      />
+      <div className="grid gap-3 md:grid-cols-2">
+        <select name="cityId" required defaultValue="" className="rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none focus:border-accent">
+          <option value="" disabled>Выберите город</option>
+          {[...cities].sort((a, b) => a.nameRu.localeCompare(b.nameRu, 'ru')).map((city) => (
+            <option key={city.id} value={city.id}>{city.nameRu}</option>
+          ))}
+        </select>
+        <input
+          name="maxRecords"
+          type="number"
+          min={1}
+          placeholder="Лимит записей (необязательно)"
+          className="rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-accent"
+        />
+      </div>
+      <div className="flex flex-wrap gap-4 text-sm">
+        <label className="flex items-center gap-2"><input name="active" type="checkbox" defaultChecked /> Сразу активные</label>
+        <label className="flex items-center gap-2"><input name="withPhotos" type="checkbox" defaultChecked /> Скачивать фото</label>
+      </div>
+      <button
+        disabled={pending}
+        className="rounded-full bg-primary px-5 py-3 font-semibold text-white transition hover:bg-primary-dark disabled:opacity-60"
+        type="submit"
+      >
+        {pending ? 'Импорт идёт…' : 'Импортировать'}
+      </button>
+      {pending ? (
+        <p className="text-sm text-slate-500">Парсер открывает 2GIS в браузере — это может занять пару минут.</p>
+      ) : null}
+      {result ? (
+        <p className="text-sm text-emerald-700">
+          Готово: найдено {result.parsed}, создано {result.toikhana.created}, пропущено {result.toikhana.skipped}, фото {result.toikhana.photosDownloaded}.
+        </p>
+      ) : null}
+      {error ? <p className="text-sm text-red-600">Ошибка: {error}</p> : null}
+    </form>
+  );
+}
+
 export function PhotoUpload({
   onSubmit
 }: {
