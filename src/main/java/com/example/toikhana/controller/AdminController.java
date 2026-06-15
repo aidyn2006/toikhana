@@ -1,6 +1,5 @@
 package com.example.toikhana.controller;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,7 +13,6 @@ import com.example.toikhana.dto.ImportRequest;
 import com.example.toikhana.dto.PhotoDto;
 import com.example.toikhana.dto.ToikhanaDetailDto;
 import com.example.toikhana.dto.ToikhanaListItemDto;
-import com.example.toikhana.model.Toikhana;
 import com.example.toikhana.repository.CityRepository;
 import com.example.toikhana.service.AdminService;
 import com.example.toikhana.service.BookingService;
@@ -55,11 +53,7 @@ public class AdminController {
 
     @GetMapping("/toikhanas")
     public List<ToikhanaListItemDto> listToikhanas() {
-        List<ToikhanaListItemDto> result = new ArrayList<ToikhanaListItemDto>();
-        for (Toikhana toikhana : adminService.list()) {
-            result.add(catalogService.toListItemDto(toikhana));
-        }
-        return result;
+        return adminService.listDtos();
     }
 
     @PostMapping("/toikhanas")

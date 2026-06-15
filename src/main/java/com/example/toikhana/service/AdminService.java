@@ -1,11 +1,13 @@
 package com.example.toikhana.service;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 import com.example.toikhana.dto.AdminToikhanaRequest;
 import com.example.toikhana.dto.PhotoDto;
+import com.example.toikhana.dto.ToikhanaListItemDto;
 import com.example.toikhana.exception.NotFoundException;
 import com.example.toikhana.model.City;
 import com.example.toikhana.model.Toikhana;
@@ -47,6 +49,19 @@ public class AdminService {
 
     public List<Toikhana> list() {
         return toikhanaRepository.findAll();
+    }
+
+    /**
+     * Lists toikhanas as DTOs. The mapping (which touches the lazy {@code toyTypes}
+     * collection) runs inside this transactional method so the entities stay managed;
+     * mapping in the controller instead triggered LazyInitializationException.
+     */
+    public List<ToikhanaListItemDto> listDtos() {
+        List<ToikhanaListItemDto> result = new ArrayList<ToikhanaListItemDto>();
+        for (Toikhana toikhana : toikhanaRepository.findAll()) {
+            result.add(catalogService.toListItemDto(toikhana));
+        }
+        return result;
     }
 
     public Toikhana save(AdminToikhanaRequest request) {

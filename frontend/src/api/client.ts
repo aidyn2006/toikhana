@@ -10,7 +10,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     'Content-Type': 'application/json',
     ...((init?.headers as Record<string, string>) ?? {}),
     ...getUserAuthHeader(),
-    ...getAdminAuthHeader()
+    // Only attach admin Basic credentials to admin endpoints. Sending them on
+    // public endpoints makes Spring's BasicAuthenticationFilter reject the
+    // request with 401 (auth runs before authorization) when the stored
+    // credentials are stale, even though the endpoint is permitAll.
+    ...(path.startsWith('/api/admin') ? getAdminAuthHeader() : {})
   };
   const response = await fetch(`${API_BASE}${path}`, {
     ...init,
