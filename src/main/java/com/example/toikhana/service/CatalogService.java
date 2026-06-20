@@ -60,6 +60,14 @@ public class CatalogService {
         return toCityDto(city);
     }
 
+    public List<ToyTypeDto> getToyTypes() {
+        List<ToyTypeDto> result = new ArrayList<ToyTypeDto>();
+        for (ToyType toyType : toyTypeRepository.findAll(Sort.by("id"))) {
+            result.add(toToyTypeDto(toyType));
+        }
+        return result;
+    }
+
     public List<ToikhanaListItemDto> getFeaturedToikhanas() {
         List<ToikhanaListItemDto> result = new ArrayList<ToikhanaListItemDto>();
         for (Toikhana toikhana : toikhanaRepository.findByFeaturedTrueAndActiveTrueOrderByCreatedAtDesc()) {

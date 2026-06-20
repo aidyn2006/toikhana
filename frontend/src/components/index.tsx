@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import type { FormEvent } from 'react';
+import type { FormEvent, ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import type { Booking, City, Photo, ToikhanaCard, ToyType } from '../types';
 import { useI18n } from '../i18n';
@@ -826,25 +826,62 @@ export function LoginForm({
   );
 }
 
+const adminInputClass = 'w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-accent';
+
+/** Labelled field wrapper for the admin forms. */
+function AdminField({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <label className="space-y-1.5">
+      <span className="text-sm font-medium text-slate-600">{label}</span>
+      {children}
+    </label>
+  );
+}
+
 export function ToikhanaForm({
+  cities,
+  toyTypes,
   onSubmit
 }: {
+  cities: City[];
+  toyTypes: ToyType[];
   onSubmit: (payload: Record<string, unknown>) => Promise<void> | void;
 }) {
+  const { loc } = useI18n();
+  const [name, setName] = useState('');
+  const [slug, setSlug] = useState('');
+  const [slugEdited, setSlugEdited] = useState(false);
+  const [selectedToyTypes, setSelectedToyTypes] = useState<number[]>([]);
+  const sortedCities = useMemo(
+    () => [...cities].sort((a, b) => a.nameRu.localeCompare(b.nameRu, 'ru')),
+    [cities]
+  );
+
+  const handleName = (value: string) => {
+    setName(value);
+    if (!slugEdited) setSlug(slugify(value));
+  };
+
+  const toggleToyType = (id: number) => {
+    setSelectedToyTypes((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  const reset = (form: HTMLFormElement) => {
+    form.reset();
+    setName('');
+    setSlug('');
+    setSlugEdited(false);
+    setSelectedToyTypes([]);
+  };
+
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = event.currentTarget;
     const data = new FormData(form);
-    const toyTypeIds = String(data.get('toyTypeIds') ?? '')
-      .split(',')
-      .map((value) => value.trim())
-      .filter(Boolean)
-      .map((value) => Number(value));
-
     await onSubmit({
       cityId: Number(data.get('cityId') ?? 0),
-      name: String(data.get('name') ?? ''),
-      slug: String(data.get('slug') ?? ''),
+      name: name.trim(),
+      slug: slug.trim(),
       descriptionKk: String(data.get('descriptionKk') ?? ''),
       descriptionRu: String(data.get('descriptionRu') ?? ''),
       address: String(data.get('address') ?? ''),
@@ -856,34 +893,95 @@ export function ToikhanaForm({
       priceMax: parseOptionalNumber(data.get('priceMax')),
       active: data.get('active') === 'on',
       featured: data.get('featured') === 'on',
-      toyTypeIds
+      toyTypeIds: selectedToyTypes
     });
-    form.reset();
+    reset(form);
   };
 
   return (
     <form onSubmit={submit} className="space-y-4 rounded-[1.75rem] bg-card p-6 shadow-soft">
       <h3 className="font-serif text-2xl">Добавить тойхану</h3>
-      <div className="grid gap-3 md:grid-cols-2">
-        <input name="cityId" type="number" required placeholder="City ID" className="rounded-2xl border border-slate-200 px-4 py-3" />
-        <input name="name" required placeholder="Название" className="rounded-2xl border border-slate-200 px-4 py-3" />
-        <input name="slug" required placeholder="Slug" className="rounded-2xl border border-slate-200 px-4 py-3" />
-        <input name="address" placeholder="Адрес" className="rounded-2xl border border-slate-200 px-4 py-3" />
-        <input name="phone" placeholder="Телефон" className="rounded-2xl border border-slate-200 px-4 py-3" />
-        <input name="whatsapp" placeholder="WhatsApp" className="rounded-2xl border border-slate-200 px-4 py-3" />
-        <input name="capacityMin" type="number" placeholder="Мин. вместимость" className="rounded-2xl border border-slate-200 px-4 py-3" />
-        <input name="capacityMax" type="number" placeholder="Макс. вместимость" className="rounded-2xl border border-slate-200 px-4 py-3" />
-        <input name="priceMin" type="number" placeholder="Цена от" className="rounded-2xl border border-slate-200 px-4 py-3" />
-        <input name="priceMax" type="number" placeholder="Цена до" className="rounded-2xl border border-slate-200 px-4 py-3" />
-        <input name="toyTypeIds" placeholder="ID типов тоя через запятую" className="rounded-2xl border border-slate-200 px-4 py-3 md:col-span-2" />
+      <div className="grid gap-4 md:grid-cols-2">
+        <AdminField label="Город">
+          <select name="cityId" required defaultValue="" className={`${adminInputClass} bg-white`}>
+            <option value="" disabled>Выберите город</option>
+            {sortedCities.map((city) => (
+              <option key={city.id} value={city.id}>{loc(city.nameRu, city.nameKk)}</option>
+            ))}
+          </select>
+        </AdminField>
+        <AdminField label="Название">
+          <input required value={name} onChange={(e) => handleName(e.target.value)} placeholder="Напр. Aq Orda Hall" className={adminInputClass} />
+        </AdminField>
+        <AdminField label="Адрес в строке (slug)">
+          <input
+            required
+            value={slug}
+            onChange={(e) => { setSlug(e.target.value); setSlugEdited(true); }}
+            placeholder="aq-orda-hall"
+            className={adminInputClass}
+          />
+        </AdminField>
+        <AdminField label="Адрес">
+          <input name="address" placeholder="Город, улица" className={adminInputClass} />
+        </AdminField>
+        <AdminField label="Телефон">
+          <input name="phone" placeholder="+7 (700) 000-00-00" className={adminInputClass} />
+        </AdminField>
+        <AdminField label="WhatsApp">
+          <input name="whatsapp" placeholder="+77000000000" className={adminInputClass} />
+        </AdminField>
+        <AdminField label="Мин. вместимость">
+          <input name="capacityMin" type="number" min={0} placeholder="50" className={adminInputClass} />
+        </AdminField>
+        <AdminField label="Макс. вместимость">
+          <input name="capacityMax" type="number" min={0} placeholder="300" className={adminInputClass} />
+        </AdminField>
+        <AdminField label="Цена от, ₸">
+          <input name="priceMin" type="number" min={0} placeholder="90000" className={adminInputClass} />
+        </AdminField>
+        <AdminField label="Цена до, ₸">
+          <input name="priceMax" type="number" min={0} placeholder="450000" className={adminInputClass} />
+        </AdminField>
       </div>
-      <textarea name="descriptionKk" rows={3} placeholder="Описание KK" className="w-full rounded-2xl border border-slate-200 px-4 py-3" />
-      <textarea name="descriptionRu" rows={3} placeholder="Описание RU" className="w-full rounded-2xl border border-slate-200 px-4 py-3" />
+
+      <div className="space-y-2">
+        <span className="text-sm font-medium text-slate-600">Типы тоя</span>
+        <div className="flex flex-wrap gap-2">
+          {toyTypes.length === 0 ? (
+            <span className="text-sm text-slate-400">Список типов загружается…</span>
+          ) : (
+            toyTypes.map((toyType) => {
+              const checked = selectedToyTypes.includes(toyType.id);
+              return (
+                <button
+                  key={toyType.id}
+                  type="button"
+                  onClick={() => toggleToyType(toyType.id)}
+                  className={`rounded-full border px-4 py-2 text-sm transition ${
+                    checked ? 'border-primary bg-primary text-white' : 'border-slate-200 bg-white text-slate-600 hover:border-primary'
+                  }`}
+                >
+                  {loc(toyType.nameRu, toyType.nameKk)}
+                </button>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      <AdminField label="Описание (KZ)">
+        <textarea name="descriptionKk" rows={3} placeholder="Той өткізуге арналған зал…" className={adminInputClass} />
+      </AdminField>
+      <AdminField label="Описание (RU)">
+        <textarea name="descriptionRu" rows={3} placeholder="Уютный зал для проведения тоя…" className={adminInputClass} />
+      </AdminField>
+
       <div className="flex flex-wrap gap-4 text-sm">
-        <label className="flex items-center gap-2"><input name="active" type="checkbox" defaultChecked /> Активна</label>
+        <label className="flex items-center gap-2"><input name="active" type="checkbox" defaultChecked /> Активна (видна в каталоге)</label>
         <label className="flex items-center gap-2"><input name="featured" type="checkbox" /> В топе</label>
       </div>
-      <button className="rounded-full bg-primary px-5 py-3 font-semibold text-white" type="submit">
+      <button className="rounded-full bg-primary px-5 py-3 font-semibold text-white transition hover:bg-primary-dark" type="submit">
         Сохранить
       </button>
     </form>
@@ -977,10 +1075,16 @@ export function Import2gisForm({
 }
 
 export function PhotoUpload({
+  toikhanas,
   onSubmit
 }: {
+  toikhanas: ToikhanaCard[];
   onSubmit: (payload: { toikhanaId: number; file: File; isMain: boolean; sortOrder?: number }) => Promise<void> | void;
 }) {
+  const sorted = useMemo(
+    () => [...toikhanas].sort((a, b) => a.name.localeCompare(b.name, 'ru')),
+    [toikhanas]
+  );
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = event.currentTarget;
@@ -999,11 +1103,24 @@ export function PhotoUpload({
   return (
     <form onSubmit={submit} className="space-y-4 rounded-[1.75rem] bg-card p-6 shadow-soft">
       <h3 className="font-serif text-2xl">Загрузка фото</h3>
-      <input name="toikhanaId" type="number" required placeholder="Toikhana ID" className="w-full rounded-2xl border border-slate-200 px-4 py-3" />
-      <input name="file" type="file" accept="image/*" required className="w-full rounded-2xl border border-slate-200 px-4 py-3" />
-      <input name="sortOrder" type="number" placeholder="Порядок" className="w-full rounded-2xl border border-slate-200 px-4 py-3" />
+      <AdminField label="Тойхана">
+        <select name="toikhanaId" required defaultValue="" className={`${adminInputClass} bg-white`}>
+          <option value="" disabled>Выберите тойхану</option>
+          {sorted.map((toikhana) => (
+            <option key={toikhana.id} value={toikhana.id}>
+              {toikhana.name} — {toikhana.cityName}
+            </option>
+          ))}
+        </select>
+      </AdminField>
+      <AdminField label="Файл">
+        <input name="file" type="file" accept="image/*" required className={adminInputClass} />
+      </AdminField>
+      <AdminField label="Порядок (необязательно)">
+        <input name="sortOrder" type="number" min={0} placeholder="0" className={adminInputClass} />
+      </AdminField>
       <label className="flex items-center gap-2 text-sm"><input name="isMain" type="checkbox" /> Главное фото</label>
-      <button className="rounded-full bg-accent px-5 py-3 font-semibold text-primary" type="submit">
+      <button className="rounded-full bg-accent px-5 py-3 font-semibold text-primary transition hover:brightness-105" type="submit">
         Загрузить
       </button>
     </form>
@@ -1066,4 +1183,22 @@ export function EmptyState({ title, text }: { title: string; text: string }) {
 function parseOptionalNumber(value: FormDataEntryValue | null) {
   if (value === null || value === '') return undefined;
   return Number(value);
+}
+
+const TRANSLIT: Record<string, string> = {
+  а: 'a', ә: 'a', б: 'b', в: 'v', г: 'g', ғ: 'g', д: 'd', е: 'e', ё: 'e', ж: 'zh', з: 'z',
+  и: 'i', й: 'i', к: 'k', қ: 'q', л: 'l', м: 'm', н: 'n', ң: 'n', о: 'o', ө: 'o', п: 'p',
+  р: 'r', с: 's', т: 't', у: 'u', ұ: 'u', ү: 'u', ф: 'f', х: 'h', һ: 'h', ц: 'ts', ч: 'ch',
+  ш: 'sh', щ: 'sch', ъ: '', ы: 'y', і: 'i', ь: '', э: 'e', ю: 'yu', я: 'ya'
+};
+
+/** Builds a URL-safe slug from a (Cyrillic/Kazakh or Latin) name. */
+function slugify(value: string): string {
+  return value
+    .toLowerCase()
+    .split('')
+    .map((ch) => (ch in TRANSLIT ? TRANSLIT[ch] : ch))
+    .join('')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }

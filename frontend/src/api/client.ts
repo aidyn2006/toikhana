@@ -1,4 +1,4 @@
-import type { AuthResponse, BlogPost, Booking, City, OwnerApplication, Toikhana, ToikhanaCard } from '../types';
+import type { AuthResponse, BlogPost, Booking, City, OwnerApplication, Toikhana, ToikhanaCard, ToyType } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '';
 
@@ -66,6 +66,10 @@ export function getCities() {
 
 export function getCity(slug: string) {
   return request<City>(`/api/cities/${slug}`);
+}
+
+export function getToyTypes() {
+  return request<ToyType[]>('/api/toy-types');
 }
 
 export function getFeaturedToikhanas() {

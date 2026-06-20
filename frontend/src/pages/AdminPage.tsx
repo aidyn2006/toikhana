@@ -9,6 +9,7 @@ import {
   getAdminOwnerApplications,
   getAdminToikhanas,
   getCities,
+  getToyTypes,
   importFrom2gis,
   updateOwnerApplicationStatus,
   uploadAdminToikhanaPhoto
@@ -19,6 +20,7 @@ export function AdminPage() {
   const isAdmin = isAuthenticated && user?.role === 'ADMIN';
 
   const citiesQuery = useQuery({ queryKey: ['admin', 'cities'], queryFn: getCities, enabled: isAdmin });
+  const toyTypesQuery = useQuery({ queryKey: ['admin', 'toy-types'], queryFn: getToyTypes, enabled: isAdmin });
   const toikhanasQuery = useQuery({ queryKey: ['admin', 'toikhanas'], queryFn: getAdminToikhanas, enabled: isAdmin });
   const bookingsQuery = useQuery({ queryKey: ['admin', 'bookings'], queryFn: getAdminBookings, enabled: isAdmin });
   const ownerApplicationsQuery = useQuery({
@@ -125,21 +127,36 @@ export function AdminPage() {
             }}
           />
           <ToikhanaForm
+            cities={citiesQuery.data ?? []}
+            toyTypes={toyTypesQuery.data ?? []}
             onSubmit={async (payload) => {
               await createMutation.mutateAsync(payload);
             }}
           />
           <PhotoUpload
+            toikhanas={toikhanasQuery.data ?? []}
             onSubmit={async ({ toikhanaId, file, isMain, sortOrder }) => {
               await uploadMutation.mutateAsync({ toikhanaId, file, isMain, sortOrder });
             }}
           />
           <div className="rounded-[1.75rem] bg-card p-6 shadow-soft">
-            <h3 className="font-serif text-2xl">Cities</h3>
-            <pre className="overflow-auto text-xs">{JSON.stringify(citiesQuery.data ?? [], null, 2)}</pre>
-          </div>
-          <div className="rounded-[1.75rem] bg-card p-6 shadow-soft">
-            <pre className="overflow-auto text-xs">{JSON.stringify(toikhanasQuery.data ?? [], null, 2)}</pre>
+            <h3 className="font-serif text-2xl">Тойханы в каталоге</h3>
+            <div className="mt-4 divide-y divide-slate-100">
+              {(toikhanasQuery.data ?? []).map((toikhana) => (
+                <div key={toikhana.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
+                  <div>
+                    <div className="font-semibold">{toikhana.name}</div>
+                    <div className="text-sm text-slate-500">{toikhana.cityName}</div>
+                  </div>
+                  {toikhana.featured ? (
+                    <span className="rounded-full bg-accent/20 px-3 py-1 text-xs font-semibold text-primary">В топе</span>
+                  ) : null}
+                </div>
+              ))}
+              {!toikhanasQuery.data?.length ? (
+                <p className="py-3 text-sm text-slate-500">Пока нет ни одной тойханы.</p>
+              ) : null}
+            </div>
           </div>
           <div className="rounded-[1.75rem] bg-card p-6 shadow-soft">
             <h3 className="font-serif text-2xl">Заявки владельцев</h3>
