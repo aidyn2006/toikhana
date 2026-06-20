@@ -1145,12 +1145,15 @@ function useI18n() {
   return ctx;
 }
 const API_BASE = "";
+const PARSER_BASE = "http://localhost:8765";
 async function request(path, init) {
   const headers = {
     "Content-Type": "application/json",
     ...(init == null ? void 0 : init.headers) ?? {},
-    ...getUserAuthHeader(),
-    ...getAdminAuthHeader()
+    // Admin requests authorize via the same JWT as regular users: the seeded
+    // admin account (role=ADMIN) gets a token whose ROLE_ADMIN authority the
+    // backend's JwtAuthFilter applies on the /api/admin chain too.
+    ...getUserAuthHeader()
   };
   const response = await fetch(`${API_BASE}${path}`, {
     ...init,
@@ -1161,16 +1164,6 @@ async function request(path, init) {
     throw new Error(payload.error ?? `Request failed: ${response.status}`);
   }
   return response.json();
-}
-function getAdminAuthHeader() {
-  const auth = localStorage.getItem("toikhana.adminAuth");
-  return auth ? { Authorization: `Basic ${auth}` } : {};
-}
-function setAdminAuth(username, password) {
-  localStorage.setItem("toikhana.adminAuth", btoa(`${username}:${password}`));
-}
-function clearAdminAuth() {
-  localStorage.removeItem("toikhana.adminAuth");
 }
 const TOKEN_KEY = "toikhana.token";
 function getUserAuthHeader() {
@@ -1203,6 +1196,9 @@ function getCities() {
 }
 function getCity(slug) {
   return request(`/api/cities/${slug}`);
+}
+function getToyTypes() {
+  return request("/api/toy-types");
 }
 function getFeaturedToikhanas() {
   return request("/api/toikhanas/featured");
@@ -1238,10 +1234,6 @@ function submitOwnerApplication(payload) {
     body: JSON.stringify(payload)
   });
 }
-function adminLogin(username, password) {
-  setAdminAuth(username, password);
-  return request("/api/admin/toikhanas");
-}
 function getAdminToikhanas() {
   return request("/api/admin/toikhanas");
 }
@@ -1268,12 +1260,35 @@ function uploadAdminToikhanaPhoto(id, file, isMain, sortOrder) {
     method: "POST",
     body: formData,
     headers: {
-      ...getAdminAuthHeader()
+      ...getUserAuthHeader()
     }
   }).then(async (response) => {
     if (!response.ok) {
       const payload = await response.json().catch(() => ({}));
       throw new Error(payload.error ?? `Request failed: ${response.status}`);
+    }
+    return response.json();
+  });
+}
+function importFrom2gis(payload) {
+  const body = {
+    url: payload.url,
+    cityId: payload.cityId,
+    active: payload.active ?? true,
+    withPhotos: payload.withPhotos ?? true,
+    toikhanaUrl: "http://localhost:8080"
+  };
+  if (typeof payload.maxRecords === "number") {
+    body.maxRecords = payload.maxRecords;
+  }
+  return fetch(`${PARSER_BASE}/import`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  }).then(async (response) => {
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error ?? `Import failed: ${response.status}`);
     }
     return response.json();
   });
@@ -1393,7 +1408,7 @@ function Logo({
 }
 const SITE_NAME = "toikhana.kz";
 const SITE_ORIGIN = "https://toikhana.kz";
-const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=1200&q=80";
+const DEFAULT_IMAGE_PATH = "/og-image.jpg";
 function siteOrigin() {
   var _a2;
   if (typeof window !== "undefined" && ((_a2 = window.location) == null ? void 0 : _a2.origin)) {
@@ -1410,7 +1425,7 @@ function canonicalUrl(path) {
 }
 function Seo({ title, description, path, image, type = "website", jsonLd, noindex }) {
   const url = canonicalUrl(path);
-  const img = image ?? DEFAULT_IMAGE;
+  const img = image ?? `${siteOrigin()}${DEFAULT_IMAGE_PATH}`;
   const desc = description ?? "Каталог тойхан и банкетных залов по всем городам Казахстана. Фото, цены, вместимость и заявки онлайн.";
   const blocks = jsonLd ? Array.isArray(jsonLd) ? jsonLd : [jsonLd] : [];
   return /* @__PURE__ */ jsxs(Helmet, { children: [
@@ -2083,34 +2098,49 @@ function BookingForm({
     done ? /* @__PURE__ */ jsx("p", { className: "text-sm text-emerald-700", children: t("booking.done") }) : null
   ] });
 }
-function LoginForm({
-  onSubmit
-}) {
-  const submit = async (event) => {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const data = new FormData(form);
-    await onSubmit(String(data.get("username") ?? ""), String(data.get("password") ?? ""));
-  };
-  return /* @__PURE__ */ jsxs("form", { onSubmit: submit, className: "space-y-4 rounded-[1.75rem] bg-card p-6 shadow-soft", children: [
-    /* @__PURE__ */ jsx("h3", { className: "font-serif text-2xl", children: "Войти в админку" }),
-    /* @__PURE__ */ jsx("input", { name: "username", placeholder: "Username", className: "w-full rounded-2xl border border-slate-200 px-4 py-3" }),
-    /* @__PURE__ */ jsx("input", { name: "password", type: "password", placeholder: "Password", className: "w-full rounded-2xl border border-slate-200 px-4 py-3" }),
-    /* @__PURE__ */ jsx("button", { className: "rounded-full bg-primary px-5 py-3 font-semibold text-white", type: "submit", children: "Войти" })
+const adminInputClass = "w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-accent";
+function AdminField({ label, children }) {
+  return /* @__PURE__ */ jsxs("label", { className: "space-y-1.5", children: [
+    /* @__PURE__ */ jsx("span", { className: "text-sm font-medium text-slate-600", children: label }),
+    children
   ] });
 }
 function ToikhanaForm({
+  cities,
+  toyTypes,
   onSubmit
 }) {
+  const { loc } = useI18n();
+  const [name, setName] = useState("");
+  const [slug, setSlug] = useState("");
+  const [slugEdited, setSlugEdited] = useState(false);
+  const [selectedToyTypes, setSelectedToyTypes] = useState([]);
+  const sortedCities = useMemo(
+    () => [...cities].sort((a, b) => a.nameRu.localeCompare(b.nameRu, "ru")),
+    [cities]
+  );
+  const handleName = (value) => {
+    setName(value);
+    if (!slugEdited) setSlug(slugify(value));
+  };
+  const toggleToyType = (id) => {
+    setSelectedToyTypes((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+  };
+  const reset = (form) => {
+    form.reset();
+    setName("");
+    setSlug("");
+    setSlugEdited(false);
+    setSelectedToyTypes([]);
+  };
   const submit = async (event) => {
     event.preventDefault();
     const form = event.currentTarget;
     const data = new FormData(form);
-    const toyTypeIds = String(data.get("toyTypeIds") ?? "").split(",").map((value) => value.trim()).filter(Boolean).map((value) => Number(value));
     await onSubmit({
       cityId: Number(data.get("cityId") ?? 0),
-      name: String(data.get("name") ?? ""),
-      slug: String(data.get("slug") ?? ""),
+      name: name.trim(),
+      slug: slug.trim(),
       descriptionKk: String(data.get("descriptionKk") ?? ""),
       descriptionRu: String(data.get("descriptionRu") ?? ""),
       address: String(data.get("address") ?? ""),
@@ -2122,43 +2152,165 @@ function ToikhanaForm({
       priceMax: parseOptionalNumber(data.get("priceMax")),
       active: data.get("active") === "on",
       featured: data.get("featured") === "on",
-      toyTypeIds
+      toyTypeIds: selectedToyTypes
     });
-    form.reset();
+    reset(form);
   };
   return /* @__PURE__ */ jsxs("form", { onSubmit: submit, className: "space-y-4 rounded-[1.75rem] bg-card p-6 shadow-soft", children: [
     /* @__PURE__ */ jsx("h3", { className: "font-serif text-2xl", children: "Добавить тойхану" }),
-    /* @__PURE__ */ jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
-      /* @__PURE__ */ jsx("input", { name: "cityId", type: "number", required: true, placeholder: "City ID", className: "rounded-2xl border border-slate-200 px-4 py-3" }),
-      /* @__PURE__ */ jsx("input", { name: "name", required: true, placeholder: "Название", className: "rounded-2xl border border-slate-200 px-4 py-3" }),
-      /* @__PURE__ */ jsx("input", { name: "slug", required: true, placeholder: "Slug", className: "rounded-2xl border border-slate-200 px-4 py-3" }),
-      /* @__PURE__ */ jsx("input", { name: "address", placeholder: "Адрес", className: "rounded-2xl border border-slate-200 px-4 py-3" }),
-      /* @__PURE__ */ jsx("input", { name: "phone", placeholder: "Телефон", className: "rounded-2xl border border-slate-200 px-4 py-3" }),
-      /* @__PURE__ */ jsx("input", { name: "whatsapp", placeholder: "WhatsApp", className: "rounded-2xl border border-slate-200 px-4 py-3" }),
-      /* @__PURE__ */ jsx("input", { name: "capacityMin", type: "number", placeholder: "Мин. вместимость", className: "rounded-2xl border border-slate-200 px-4 py-3" }),
-      /* @__PURE__ */ jsx("input", { name: "capacityMax", type: "number", placeholder: "Макс. вместимость", className: "rounded-2xl border border-slate-200 px-4 py-3" }),
-      /* @__PURE__ */ jsx("input", { name: "priceMin", type: "number", placeholder: "Цена от", className: "rounded-2xl border border-slate-200 px-4 py-3" }),
-      /* @__PURE__ */ jsx("input", { name: "priceMax", type: "number", placeholder: "Цена до", className: "rounded-2xl border border-slate-200 px-4 py-3" }),
-      /* @__PURE__ */ jsx("input", { name: "toyTypeIds", placeholder: "ID типов тоя через запятую", className: "rounded-2xl border border-slate-200 px-4 py-3 md:col-span-2" })
+    /* @__PURE__ */ jsxs("div", { className: "grid gap-4 md:grid-cols-2", children: [
+      /* @__PURE__ */ jsx(AdminField, { label: "Город", children: /* @__PURE__ */ jsxs("select", { name: "cityId", required: true, defaultValue: "", className: `${adminInputClass} bg-white`, children: [
+        /* @__PURE__ */ jsx("option", { value: "", disabled: true, children: "Выберите город" }),
+        sortedCities.map((city) => /* @__PURE__ */ jsx("option", { value: city.id, children: loc(city.nameRu, city.nameKk) }, city.id))
+      ] }) }),
+      /* @__PURE__ */ jsx(AdminField, { label: "Название", children: /* @__PURE__ */ jsx("input", { required: true, value: name, onChange: (e) => handleName(e.target.value), placeholder: "Напр. Aq Orda Hall", className: adminInputClass }) }),
+      /* @__PURE__ */ jsx(AdminField, { label: "Адрес в строке (slug)", children: /* @__PURE__ */ jsx(
+        "input",
+        {
+          required: true,
+          value: slug,
+          onChange: (e) => {
+            setSlug(e.target.value);
+            setSlugEdited(true);
+          },
+          placeholder: "aq-orda-hall",
+          className: adminInputClass
+        }
+      ) }),
+      /* @__PURE__ */ jsx(AdminField, { label: "Адрес", children: /* @__PURE__ */ jsx("input", { name: "address", placeholder: "Город, улица", className: adminInputClass }) }),
+      /* @__PURE__ */ jsx(AdminField, { label: "Телефон", children: /* @__PURE__ */ jsx("input", { name: "phone", placeholder: "+7 (700) 000-00-00", className: adminInputClass }) }),
+      /* @__PURE__ */ jsx(AdminField, { label: "WhatsApp", children: /* @__PURE__ */ jsx("input", { name: "whatsapp", placeholder: "+77000000000", className: adminInputClass }) }),
+      /* @__PURE__ */ jsx(AdminField, { label: "Мин. вместимость", children: /* @__PURE__ */ jsx("input", { name: "capacityMin", type: "number", min: 0, placeholder: "50", className: adminInputClass }) }),
+      /* @__PURE__ */ jsx(AdminField, { label: "Макс. вместимость", children: /* @__PURE__ */ jsx("input", { name: "capacityMax", type: "number", min: 0, placeholder: "300", className: adminInputClass }) }),
+      /* @__PURE__ */ jsx(AdminField, { label: "Цена от, ₸", children: /* @__PURE__ */ jsx("input", { name: "priceMin", type: "number", min: 0, placeholder: "90000", className: adminInputClass }) }),
+      /* @__PURE__ */ jsx(AdminField, { label: "Цена до, ₸", children: /* @__PURE__ */ jsx("input", { name: "priceMax", type: "number", min: 0, placeholder: "450000", className: adminInputClass }) })
     ] }),
-    /* @__PURE__ */ jsx("textarea", { name: "descriptionKk", rows: 3, placeholder: "Описание KK", className: "w-full rounded-2xl border border-slate-200 px-4 py-3" }),
-    /* @__PURE__ */ jsx("textarea", { name: "descriptionRu", rows: 3, placeholder: "Описание RU", className: "w-full rounded-2xl border border-slate-200 px-4 py-3" }),
+    /* @__PURE__ */ jsxs("div", { className: "space-y-2", children: [
+      /* @__PURE__ */ jsx("span", { className: "text-sm font-medium text-slate-600", children: "Типы тоя" }),
+      /* @__PURE__ */ jsx("div", { className: "flex flex-wrap gap-2", children: toyTypes.length === 0 ? /* @__PURE__ */ jsx("span", { className: "text-sm text-slate-400", children: "Список типов загружается…" }) : toyTypes.map((toyType) => {
+        const checked = selectedToyTypes.includes(toyType.id);
+        return /* @__PURE__ */ jsx(
+          "button",
+          {
+            type: "button",
+            onClick: () => toggleToyType(toyType.id),
+            className: `rounded-full border px-4 py-2 text-sm transition ${checked ? "border-primary bg-primary text-white" : "border-slate-200 bg-white text-slate-600 hover:border-primary"}`,
+            children: loc(toyType.nameRu, toyType.nameKk)
+          },
+          toyType.id
+        );
+      }) })
+    ] }),
+    /* @__PURE__ */ jsx(AdminField, { label: "Описание (KZ)", children: /* @__PURE__ */ jsx("textarea", { name: "descriptionKk", rows: 3, placeholder: "Той өткізуге арналған зал…", className: adminInputClass }) }),
+    /* @__PURE__ */ jsx(AdminField, { label: "Описание (RU)", children: /* @__PURE__ */ jsx("textarea", { name: "descriptionRu", rows: 3, placeholder: "Уютный зал для проведения тоя…", className: adminInputClass }) }),
     /* @__PURE__ */ jsxs("div", { className: "flex flex-wrap gap-4 text-sm", children: [
       /* @__PURE__ */ jsxs("label", { className: "flex items-center gap-2", children: [
         /* @__PURE__ */ jsx("input", { name: "active", type: "checkbox", defaultChecked: true }),
-        " Активна"
+        " Активна (видна в каталоге)"
       ] }),
       /* @__PURE__ */ jsxs("label", { className: "flex items-center gap-2", children: [
         /* @__PURE__ */ jsx("input", { name: "featured", type: "checkbox" }),
         " В топе"
       ] })
     ] }),
-    /* @__PURE__ */ jsx("button", { className: "rounded-full bg-primary px-5 py-3 font-semibold text-white", type: "submit", children: "Сохранить" })
+    /* @__PURE__ */ jsx("button", { className: "rounded-full bg-primary px-5 py-3 font-semibold text-white transition hover:bg-primary-dark", type: "submit", children: "Сохранить" })
+  ] });
+}
+function Import2gisForm({
+  cities,
+  onSubmit,
+  pending,
+  result,
+  error
+}) {
+  const submit = async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    const maxRecordsRaw = data.get("maxRecords");
+    await onSubmit({
+      url: String(data.get("url") ?? "").trim(),
+      cityId: Number(data.get("cityId") ?? 0),
+      active: data.get("active") === "on",
+      withPhotos: data.get("withPhotos") === "on",
+      maxRecords: maxRecordsRaw ? Number(maxRecordsRaw) : void 0
+    });
+  };
+  return /* @__PURE__ */ jsxs("form", { onSubmit: submit, className: "space-y-4 rounded-[1.75rem] bg-card p-6 shadow-soft", children: [
+    /* @__PURE__ */ jsxs("div", { children: [
+      /* @__PURE__ */ jsx("h3", { className: "font-serif text-2xl", children: "Импорт из 2GIS" }),
+      /* @__PURE__ */ jsx("p", { className: "mt-1 text-sm text-slate-500", children: "Вставьте ссылку на выдачу 2GIS — организации и фотографии добавятся автоматически." })
+    ] }),
+    /* @__PURE__ */ jsx(
+      "input",
+      {
+        name: "url",
+        required: true,
+        placeholder: "https://2gis.kz/astana/search/тойхана",
+        className: "w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-accent"
+      }
+    ),
+    /* @__PURE__ */ jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
+      /* @__PURE__ */ jsxs("select", { name: "cityId", required: true, defaultValue: "", className: "rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none focus:border-accent", children: [
+        /* @__PURE__ */ jsx("option", { value: "", disabled: true, children: "Выберите город" }),
+        [...cities].sort((a, b) => a.nameRu.localeCompare(b.nameRu, "ru")).map((city) => /* @__PURE__ */ jsx("option", { value: city.id, children: city.nameRu }, city.id))
+      ] }),
+      /* @__PURE__ */ jsx(
+        "input",
+        {
+          name: "maxRecords",
+          type: "number",
+          min: 1,
+          placeholder: "Лимит записей (необязательно)",
+          className: "rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-accent"
+        }
+      )
+    ] }),
+    /* @__PURE__ */ jsxs("div", { className: "flex flex-wrap gap-4 text-sm", children: [
+      /* @__PURE__ */ jsxs("label", { className: "flex items-center gap-2", children: [
+        /* @__PURE__ */ jsx("input", { name: "active", type: "checkbox", defaultChecked: true }),
+        " Сразу активные"
+      ] }),
+      /* @__PURE__ */ jsxs("label", { className: "flex items-center gap-2", children: [
+        /* @__PURE__ */ jsx("input", { name: "withPhotos", type: "checkbox", defaultChecked: true }),
+        " Скачивать фото"
+      ] })
+    ] }),
+    /* @__PURE__ */ jsx(
+      "button",
+      {
+        disabled: pending,
+        className: "rounded-full bg-primary px-5 py-3 font-semibold text-white transition hover:bg-primary-dark disabled:opacity-60",
+        type: "submit",
+        children: pending ? "Импорт идёт…" : "Импортировать"
+      }
+    ),
+    pending ? /* @__PURE__ */ jsx("p", { className: "text-sm text-slate-500", children: "Парсер открывает 2GIS в браузере — это может занять пару минут." }) : null,
+    result ? /* @__PURE__ */ jsxs("p", { className: "text-sm text-emerald-700", children: [
+      "Готово: найдено ",
+      result.parsed,
+      ", создано ",
+      result.toikhana.created,
+      ", пропущено ",
+      result.toikhana.skipped,
+      ", фото ",
+      result.toikhana.photosDownloaded,
+      "."
+    ] }) : null,
+    error ? /* @__PURE__ */ jsxs("p", { className: "text-sm text-red-600", children: [
+      "Ошибка: ",
+      error
+    ] }) : null
   ] });
 }
 function PhotoUpload({
+  toikhanas,
   onSubmit
 }) {
+  const sorted = useMemo(
+    () => [...toikhanas].sort((a, b) => a.name.localeCompare(b.name, "ru")),
+    [toikhanas]
+  );
   const submit = async (event) => {
     event.preventDefault();
     const form = event.currentTarget;
@@ -2175,14 +2327,21 @@ function PhotoUpload({
   };
   return /* @__PURE__ */ jsxs("form", { onSubmit: submit, className: "space-y-4 rounded-[1.75rem] bg-card p-6 shadow-soft", children: [
     /* @__PURE__ */ jsx("h3", { className: "font-serif text-2xl", children: "Загрузка фото" }),
-    /* @__PURE__ */ jsx("input", { name: "toikhanaId", type: "number", required: true, placeholder: "Toikhana ID", className: "w-full rounded-2xl border border-slate-200 px-4 py-3" }),
-    /* @__PURE__ */ jsx("input", { name: "file", type: "file", accept: "image/*", required: true, className: "w-full rounded-2xl border border-slate-200 px-4 py-3" }),
-    /* @__PURE__ */ jsx("input", { name: "sortOrder", type: "number", placeholder: "Порядок", className: "w-full rounded-2xl border border-slate-200 px-4 py-3" }),
+    /* @__PURE__ */ jsx(AdminField, { label: "Тойхана", children: /* @__PURE__ */ jsxs("select", { name: "toikhanaId", required: true, defaultValue: "", className: `${adminInputClass} bg-white`, children: [
+      /* @__PURE__ */ jsx("option", { value: "", disabled: true, children: "Выберите тойхану" }),
+      sorted.map((toikhana) => /* @__PURE__ */ jsxs("option", { value: toikhana.id, children: [
+        toikhana.name,
+        " — ",
+        toikhana.cityName
+      ] }, toikhana.id))
+    ] }) }),
+    /* @__PURE__ */ jsx(AdminField, { label: "Файл", children: /* @__PURE__ */ jsx("input", { name: "file", type: "file", accept: "image/*", required: true, className: adminInputClass }) }),
+    /* @__PURE__ */ jsx(AdminField, { label: "Порядок (необязательно)", children: /* @__PURE__ */ jsx("input", { name: "sortOrder", type: "number", min: 0, placeholder: "0", className: adminInputClass }) }),
     /* @__PURE__ */ jsxs("label", { className: "flex items-center gap-2 text-sm", children: [
       /* @__PURE__ */ jsx("input", { name: "isMain", type: "checkbox" }),
       " Главное фото"
     ] }),
-    /* @__PURE__ */ jsx("button", { className: "rounded-full bg-accent px-5 py-3 font-semibold text-primary", type: "submit", children: "Загрузить" })
+    /* @__PURE__ */ jsx("button", { className: "rounded-full bg-accent px-5 py-3 font-semibold text-primary transition hover:brightness-105", type: "submit", children: "Загрузить" })
   ] });
 }
 function BookingList({ bookings }) {
@@ -2205,20 +2364,65 @@ function parseOptionalNumber(value) {
   if (value === null || value === "") return void 0;
   return Number(value);
 }
+const TRANSLIT = {
+  а: "a",
+  ә: "a",
+  б: "b",
+  в: "v",
+  г: "g",
+  ғ: "g",
+  д: "d",
+  е: "e",
+  ё: "e",
+  ж: "zh",
+  з: "z",
+  и: "i",
+  й: "i",
+  к: "k",
+  қ: "q",
+  л: "l",
+  м: "m",
+  н: "n",
+  ң: "n",
+  о: "o",
+  ө: "o",
+  п: "p",
+  р: "r",
+  с: "s",
+  т: "t",
+  у: "u",
+  ұ: "u",
+  ү: "u",
+  ф: "f",
+  х: "h",
+  һ: "h",
+  ц: "ts",
+  ч: "ch",
+  ш: "sh",
+  щ: "sch",
+  ъ: "",
+  ы: "y",
+  і: "i",
+  ь: "",
+  э: "e",
+  ю: "yu",
+  я: "ya"
+};
+function slugify(value) {
+  return value.toLowerCase().split("").map((ch) => ch in TRANSLIT ? TRANSLIT[ch] : ch).join("").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
 function AdminPage() {
-  var _a2;
-  const [loggedIn, setLoggedIn] = useState(Boolean(localStorage.getItem("toikhana.adminAuth")));
-  const citiesQuery = useQuery({ queryKey: ["admin", "cities"], queryFn: getCities, enabled: loggedIn });
-  const toikhanasQuery = useQuery({ queryKey: ["admin", "toikhanas"], queryFn: getAdminToikhanas, enabled: loggedIn });
-  const bookingsQuery = useQuery({ queryKey: ["admin", "bookings"], queryFn: getAdminBookings, enabled: loggedIn });
+  var _a2, _b2;
+  const { user, isAuthenticated, logout } = useAuth();
+  const isAdmin = isAuthenticated && (user == null ? void 0 : user.role) === "ADMIN";
+  const citiesQuery = useQuery({ queryKey: ["admin", "cities"], queryFn: getCities, enabled: isAdmin });
+  const toyTypesQuery = useQuery({ queryKey: ["admin", "toy-types"], queryFn: getToyTypes, enabled: isAdmin });
+  const toikhanasQuery = useQuery({ queryKey: ["admin", "toikhanas"], queryFn: getAdminToikhanas, enabled: isAdmin });
+  const bookingsQuery = useQuery({ queryKey: ["admin", "bookings"], queryFn: getAdminBookings, enabled: isAdmin });
   const ownerApplicationsQuery = useQuery({
     queryKey: ["admin", "owner-applications"],
     queryFn: getAdminOwnerApplications,
-    enabled: loggedIn
-  });
-  const loginMutation = useMutation({
-    mutationFn: ({ username, password }) => adminLogin(username, password),
-    onSuccess: () => setLoggedIn(true)
+    enabled: isAdmin
   });
   const createMutation = useMutation({
     mutationFn: createAdminToikhana,
@@ -2236,100 +2440,152 @@ function AdminPage() {
     }) => uploadAdminToikhanaPhoto(toikhanaId, file, isMain, sortOrder),
     onSuccess: () => toikhanasQuery.refetch()
   });
+  const import2gisMutation = useMutation({
+    mutationFn: importFrom2gis,
+    onSuccess: () => {
+      toikhanasQuery.refetch();
+      citiesQuery.refetch();
+    }
+  });
   const ownerStatusMutation = useMutation({
     mutationFn: ({ id, status }) => updateOwnerApplicationStatus(id, status),
     onSuccess: () => ownerApplicationsQuery.refetch()
   });
+  if (!isAuthenticated) {
+    return /* @__PURE__ */ jsxs("main", { className: "space-y-4 p-4 md:p-8", children: [
+      /* @__PURE__ */ jsx(Helmet, { children: /* @__PURE__ */ jsx("title", { children: "Admin | toikhana.kz" }) }),
+      /* @__PURE__ */ jsxs("div", { className: "rounded-[1.75rem] bg-card p-6 shadow-soft", children: [
+        /* @__PURE__ */ jsx("h2", { className: "font-serif text-3xl", children: "Админка" }),
+        /* @__PURE__ */ jsx("p", { className: "mt-2 text-sm text-slate-500", children: "Войдите под аккаунтом администратора." }),
+        /* @__PURE__ */ jsx(Link, { to: "/login", className: "mt-4 inline-block rounded-full bg-primary px-5 py-3 font-semibold text-white", children: "Войти" })
+      ] })
+    ] });
+  }
+  if (!isAdmin) {
+    return /* @__PURE__ */ jsxs("main", { className: "space-y-4 p-4 md:p-8", children: [
+      /* @__PURE__ */ jsx(Helmet, { children: /* @__PURE__ */ jsx("title", { children: "Admin | toikhana.kz" }) }),
+      /* @__PURE__ */ jsxs("div", { className: "rounded-[1.75rem] bg-card p-6 shadow-soft", children: [
+        /* @__PURE__ */ jsx("h2", { className: "font-serif text-3xl", children: "Нет доступа" }),
+        /* @__PURE__ */ jsx("p", { className: "mt-2 text-sm text-slate-500", children: "Этот раздел доступен только администраторам." }),
+        /* @__PURE__ */ jsx(
+          "button",
+          {
+            type: "button",
+            className: "mt-4 rounded-full bg-slate-200 px-4 py-2 text-sm",
+            onClick: logout,
+            children: "Выйти"
+          }
+        )
+      ] })
+    ] });
+  }
   return /* @__PURE__ */ jsxs("main", { className: "space-y-8 p-4 md:p-8", children: [
     /* @__PURE__ */ jsx(Helmet, { children: /* @__PURE__ */ jsx("title", { children: "Admin | toikhana.kz" }) }),
-    !loggedIn ? /* @__PURE__ */ jsx(
-      LoginForm,
-      {
-        onSubmit: async (username, password) => {
-          await loginMutation.mutateAsync({ username, password });
-        }
-      }
-    ) : /* @__PURE__ */ jsxs("div", { className: "space-y-8", children: [
+    /* @__PURE__ */ jsxs("div", { className: "flex flex-wrap items-center justify-between gap-3", children: [
+      /* @__PURE__ */ jsxs("p", { className: "text-sm text-slate-500", children: [
+        "Вы вошли как ",
+        (user == null ? void 0 : user.name) || (user == null ? void 0 : user.email)
+      ] }),
       /* @__PURE__ */ jsx(
         "button",
         {
           type: "button",
           className: "rounded-full bg-slate-200 px-4 py-2 text-sm",
-          onClick: () => {
-            clearAdminAuth();
-            setLoggedIn(false);
-          },
+          onClick: logout,
           children: "Выйти"
         }
-      ),
-      /* @__PURE__ */ jsxs("section", { className: "grid gap-6 lg:grid-cols-2", children: [
-        /* @__PURE__ */ jsxs("div", { className: "space-y-4", children: [
-          /* @__PURE__ */ jsx("h2", { className: "font-serif text-3xl", children: "Тойханы" }),
-          /* @__PURE__ */ jsx(
-            ToikhanaForm,
-            {
-              onSubmit: async (payload) => {
-                await createMutation.mutateAsync(payload);
-              }
+      )
+    ] }),
+    /* @__PURE__ */ jsxs("section", { className: "grid gap-6 lg:grid-cols-2", children: [
+      /* @__PURE__ */ jsxs("div", { className: "space-y-4", children: [
+        /* @__PURE__ */ jsx("h2", { className: "font-serif text-3xl", children: "Тойханы" }),
+        /* @__PURE__ */ jsx(
+          Import2gisForm,
+          {
+            cities: citiesQuery.data ?? [],
+            pending: import2gisMutation.isPending,
+            result: import2gisMutation.data ?? null,
+            error: import2gisMutation.error ? import2gisMutation.error.message : null,
+            onSubmit: async (payload) => {
+              await import2gisMutation.mutateAsync(payload);
             }
-          ),
-          /* @__PURE__ */ jsx(
-            PhotoUpload,
-            {
-              onSubmit: async ({ toikhanaId, file, isMain, sortOrder }) => {
-                await uploadMutation.mutateAsync({ toikhanaId, file, isMain, sortOrder });
-              }
+          }
+        ),
+        /* @__PURE__ */ jsx(
+          ToikhanaForm,
+          {
+            cities: citiesQuery.data ?? [],
+            toyTypes: toyTypesQuery.data ?? [],
+            onSubmit: async (payload) => {
+              await createMutation.mutateAsync(payload);
             }
-          ),
-          /* @__PURE__ */ jsxs("div", { className: "rounded-[1.75rem] bg-card p-6 shadow-soft", children: [
-            /* @__PURE__ */ jsx("h3", { className: "font-serif text-2xl", children: "Cities" }),
-            /* @__PURE__ */ jsx("pre", { className: "overflow-auto text-xs", children: JSON.stringify(citiesQuery.data ?? [], null, 2) })
-          ] }),
-          /* @__PURE__ */ jsx("div", { className: "rounded-[1.75rem] bg-card p-6 shadow-soft", children: /* @__PURE__ */ jsx("pre", { className: "overflow-auto text-xs", children: JSON.stringify(toikhanasQuery.data ?? [], null, 2) }) }),
-          /* @__PURE__ */ jsxs("div", { className: "rounded-[1.75rem] bg-card p-6 shadow-soft", children: [
-            /* @__PURE__ */ jsx("h3", { className: "font-serif text-2xl", children: "Заявки владельцев" }),
-            /* @__PURE__ */ jsxs("div", { className: "mt-4 space-y-4", children: [
-              (ownerApplicationsQuery.data ?? []).map((application) => /* @__PURE__ */ jsxs("div", { className: "rounded-2xl border border-slate-100 p-4", children: [
-                /* @__PURE__ */ jsxs("div", { className: "flex flex-wrap items-center justify-between gap-3", children: [
-                  /* @__PURE__ */ jsxs("div", { children: [
-                    /* @__PURE__ */ jsx("div", { className: "font-semibold", children: application.name }),
-                    /* @__PURE__ */ jsxs("div", { className: "text-sm text-slate-500", children: [
-                      application.city,
-                      application.hallName ? ` · ${application.hallName}` : ""
-                    ] })
-                  ] }),
-                  /* @__PURE__ */ jsx("span", { className: "rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600", children: application.status })
-                ] }),
-                /* @__PURE__ */ jsxs("div", { className: "mt-3 text-sm text-slate-600", children: [
-                  /* @__PURE__ */ jsx("div", { children: application.phone }),
-                  application.whatsapp ? /* @__PURE__ */ jsx("div", { children: application.whatsapp }) : null,
-                  application.message ? /* @__PURE__ */ jsx("div", { className: "mt-2 whitespace-pre-line", children: application.message }) : null
-                ] }),
-                /* @__PURE__ */ jsx("div", { className: "mt-4 flex flex-wrap gap-2", children: ["reviewed", "contacted", "approved", "rejected"].map((status) => /* @__PURE__ */ jsx(
-                  "button",
-                  {
-                    type: "button",
-                    className: "rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em]",
-                    onClick: () => ownerStatusMutation.mutate({ id: application.id ?? 0, status }),
-                    children: status
-                  },
-                  status
-                )) })
-              ] }, application.id)),
-              !((_a2 = ownerApplicationsQuery.data) == null ? void 0 : _a2.length) ? /* @__PURE__ */ jsx("p", { className: "text-sm text-slate-500", children: "Пока нет заявок владельцев." }) : null
-            ] })
+          }
+        ),
+        /* @__PURE__ */ jsx(
+          PhotoUpload,
+          {
+            toikhanas: toikhanasQuery.data ?? [],
+            onSubmit: async ({ toikhanaId, file, isMain, sortOrder }) => {
+              await uploadMutation.mutateAsync({ toikhanaId, file, isMain, sortOrder });
+            }
+          }
+        ),
+        /* @__PURE__ */ jsxs("div", { className: "rounded-[1.75rem] bg-card p-6 shadow-soft", children: [
+          /* @__PURE__ */ jsx("h3", { className: "font-serif text-2xl", children: "Тойханы в каталоге" }),
+          /* @__PURE__ */ jsxs("div", { className: "mt-4 divide-y divide-slate-100", children: [
+            (toikhanasQuery.data ?? []).map((toikhana) => /* @__PURE__ */ jsxs("div", { className: "flex flex-wrap items-center justify-between gap-2 py-3", children: [
+              /* @__PURE__ */ jsxs("div", { children: [
+                /* @__PURE__ */ jsx("div", { className: "font-semibold", children: toikhana.name }),
+                /* @__PURE__ */ jsx("div", { className: "text-sm text-slate-500", children: toikhana.cityName })
+              ] }),
+              toikhana.featured ? /* @__PURE__ */ jsx("span", { className: "rounded-full bg-accent/20 px-3 py-1 text-xs font-semibold text-primary", children: "В топе" }) : null
+            ] }, toikhana.id)),
+            !((_a2 = toikhanasQuery.data) == null ? void 0 : _a2.length) ? /* @__PURE__ */ jsx("p", { className: "py-3 text-sm text-slate-500", children: "Пока нет ни одной тойханы." }) : null
           ] })
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "space-y-4", children: [
-          /* @__PURE__ */ jsx("h2", { className: "font-serif text-3xl", children: "Заявки гостей" }),
-          /* @__PURE__ */ jsx(BookingList, { bookings: bookingsQuery.data ?? [] })
+        /* @__PURE__ */ jsxs("div", { className: "rounded-[1.75rem] bg-card p-6 shadow-soft", children: [
+          /* @__PURE__ */ jsx("h3", { className: "font-serif text-2xl", children: "Заявки владельцев" }),
+          /* @__PURE__ */ jsxs("div", { className: "mt-4 space-y-4", children: [
+            (ownerApplicationsQuery.data ?? []).map((application) => /* @__PURE__ */ jsxs("div", { className: "rounded-2xl border border-slate-100 p-4", children: [
+              /* @__PURE__ */ jsxs("div", { className: "flex flex-wrap items-center justify-between gap-3", children: [
+                /* @__PURE__ */ jsxs("div", { children: [
+                  /* @__PURE__ */ jsx("div", { className: "font-semibold", children: application.name }),
+                  /* @__PURE__ */ jsxs("div", { className: "text-sm text-slate-500", children: [
+                    application.city,
+                    application.hallName ? ` · ${application.hallName}` : ""
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsx("span", { className: "rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600", children: application.status })
+              ] }),
+              /* @__PURE__ */ jsxs("div", { className: "mt-3 text-sm text-slate-600", children: [
+                /* @__PURE__ */ jsx("div", { children: application.phone }),
+                application.whatsapp ? /* @__PURE__ */ jsx("div", { children: application.whatsapp }) : null,
+                application.message ? /* @__PURE__ */ jsx("div", { className: "mt-2 whitespace-pre-line", children: application.message }) : null
+              ] }),
+              /* @__PURE__ */ jsx("div", { className: "mt-4 flex flex-wrap gap-2", children: ["reviewed", "contacted", "approved", "rejected"].map((status) => /* @__PURE__ */ jsx(
+                "button",
+                {
+                  type: "button",
+                  className: "rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em]",
+                  onClick: () => ownerStatusMutation.mutate({ id: application.id ?? 0, status }),
+                  children: status
+                },
+                status
+              )) })
+            ] }, application.id)),
+            !((_b2 = ownerApplicationsQuery.data) == null ? void 0 : _b2.length) ? /* @__PURE__ */ jsx("p", { className: "text-sm text-slate-500", children: "Пока нет заявок владельцев." }) : null
+          ] })
         ] })
+      ] }),
+      /* @__PURE__ */ jsxs("div", { className: "space-y-4", children: [
+        /* @__PURE__ */ jsx("h2", { className: "font-serif text-3xl", children: "Заявки гостей" }),
+        /* @__PURE__ */ jsx(BookingList, { bookings: bookingsQuery.data ?? [] })
       ] })
     ] })
   ] });
 }
 function CityPage() {
-  var _a2, _b2, _c, _d, _e, _f;
+  var _a2, _b2, _c, _d;
   const { t, loc } = useI18n();
   const { citySlug = "" } = useParams();
   const [capacity, setCapacity] = useState("");
@@ -2349,8 +2605,8 @@ function CityPage() {
     /* @__PURE__ */ jsx(
       Seo,
       {
-        title: cityName ? `Тойхана ${cityName} — ${((_b2 = cityQuery.data) == null ? void 0 : _b2.toikhanaCount) ?? 0} залов | toikhana.kz` : "Тойхана | toikhana.kz",
-        description: cityName ? `Тойханы и банкетные залы в городе ${cityName}. ${((_c = cityQuery.data) == null ? void 0 : _c.toikhanaCount) ?? 0} объектов: фото, цены, вместимость и заявки онлайн.` : "Каталог тойхан по городам Казахстана.",
+        title: cityName ? `Тойхана ${cityName} — банкетные залы и цены | toikhana.kz` : "Тойхана — банкетные залы Казахстана | toikhana.kz",
+        description: cityName ? `Тойханы и банкетные залы в городе ${cityName}: фото, цены, вместимость и онлайн-заявки. Подберите и забронируйте зал в городе ${cityName} на toikhana.kz.` : "Каталог тойхан по городам Казахстана.",
         path: citySlug ? `/${citySlug}` : "/",
         jsonLd: breadcrumbJsonLd([
           { name: "Главная", path: "/" },
@@ -2358,9 +2614,18 @@ function CityPage() {
         ])
       }
     ),
-    /* @__PURE__ */ jsx(PageHeader, { title, count: ((_d = itemsQuery.data) == null ? void 0 : _d.count) ?? 0 }),
+    /* @__PURE__ */ jsx(PageHeader, { title, count: ((_b2 = itemsQuery.data) == null ? void 0 : _b2.count) ?? 0 }),
+    localCityName ? /* @__PURE__ */ jsx("section", { className: "rounded-[1.75rem] bg-card p-6 text-sm leading-7 text-slate-600 shadow-soft", children: /* @__PURE__ */ jsxs("p", { children: [
+      /* @__PURE__ */ jsxs("strong", { className: "text-primary", children: [
+        "Тойхана ",
+        localCityName
+      ] }),
+      " — подберите банкетный зал для свадьбы, той-думана, дня рождения или корпоратива в городе ",
+      localCityName,
+      ". Сравнивайте тойханы по вместимости, цене и расположению, смотрите фото залов и оставляйте заявку онлайн прямо на toikhana.kz."
+    ] }) }) : null,
     /* @__PURE__ */ jsx(FilterPanel, { capacity, onCapacityChange: setCapacity, type, onTypeChange: setType }),
-    ((_f = (_e = itemsQuery.data) == null ? void 0 : _e.items) == null ? void 0 : _f.length) ? /* @__PURE__ */ jsx(ToikhanaGrid, { items: itemsQuery.data.items }) : /* @__PURE__ */ jsx(EmptyState, { title: t("city.empty"), text: t("city.emptyText") })
+    ((_d = (_c = itemsQuery.data) == null ? void 0 : _c.items) == null ? void 0 : _d.length) ? /* @__PURE__ */ jsx(ToikhanaGrid, { items: itemsQuery.data.items }) : /* @__PURE__ */ jsx(EmptyState, { title: t("city.empty"), text: t("city.emptyText") })
   ] });
 }
 function HomePage() {
@@ -3013,11 +3278,14 @@ function App() {
     /* @__PURE__ */ jsx(SiteFooter, { cities })
   ] });
 }
-function render(url) {
+function render(url, seeds = []) {
   const helmetContext = {};
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, enabled: false } }
   });
+  for (const seed of seeds) {
+    queryClient.setQueryData(seed.key, seed.data);
+  }
   const html = renderToString(
     /* @__PURE__ */ jsx(Providers, { queryClient, helmetContext, children: /* @__PURE__ */ jsx(StaticRouter, { location: url, children: /* @__PURE__ */ jsx(App, {}) }) })
   );

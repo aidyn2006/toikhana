@@ -28,10 +28,10 @@ export function CityPage() {
   return (
     <main className="mx-auto max-w-7xl space-y-8 p-4 md:p-8">
       <Seo
-        title={cityName ? `Тойхана ${cityName} — ${cityQuery.data?.toikhanaCount ?? 0} залов | toikhana.kz` : 'Тойхана | toikhana.kz'}
+        title={cityName ? `Тойхана ${cityName} — банкетные залы и цены | toikhana.kz` : 'Тойхана — банкетные залы Казахстана | toikhana.kz'}
         description={
           cityName
-            ? `Тойханы и банкетные залы в городе ${cityName}. ${cityQuery.data?.toikhanaCount ?? 0} объектов: фото, цены, вместимость и заявки онлайн.`
+            ? `Тойханы и банкетные залы в городе ${cityName}: фото, цены, вместимость и онлайн-заявки. Подберите и забронируйте зал в городе ${cityName} на toikhana.kz.`
             : 'Каталог тойхан по городам Казахстана.'
         }
         path={citySlug ? `/${citySlug}` : '/'}
@@ -41,6 +41,15 @@ export function CityPage() {
         ])}
       />
       <PageHeader title={title} count={itemsQuery.data?.count ?? 0} />
+      {localCityName ? (
+        <section className="rounded-[1.75rem] bg-card p-6 text-sm leading-7 text-slate-600 shadow-soft">
+          <p>
+            <strong className="text-primary">Тойхана {localCityName}</strong> — подберите банкетный зал для свадьбы,
+            той-думана, дня рождения или корпоратива в городе {localCityName}. Сравнивайте тойханы по вместимости,
+            цене и расположению, смотрите фото залов и оставляйте заявку онлайн прямо на toikhana.kz.
+          </p>
+        </section>
+      ) : null}
       <FilterPanel capacity={capacity} onCapacityChange={setCapacity} type={type} onTypeChange={setType} />
       {itemsQuery.data?.items?.length ? (
         <ToikhanaGrid items={itemsQuery.data.items} />
