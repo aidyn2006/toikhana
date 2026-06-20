@@ -2,7 +2,9 @@ import { Helmet } from 'react-helmet-async';
 
 const SITE_NAME = 'toikhana.kz';
 const SITE_ORIGIN = 'https://toikhana.kz';
-const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=1200&q=80';
+// Brand social-preview image served from /public. Drop the logo file at
+// frontend/public/og-image.jpg to make it appear in link previews.
+const DEFAULT_IMAGE_PATH = '/og-image.jpg';
 
 function siteOrigin() {
   if (typeof window !== 'undefined' && window.location?.origin) {
@@ -32,7 +34,7 @@ export interface SeoProps {
 
 export function Seo({ title, description, path, image, type = 'website', jsonLd, noindex }: SeoProps) {
   const url = canonicalUrl(path);
-  const img = image ?? DEFAULT_IMAGE;
+  const img = image ?? `${siteOrigin()}${DEFAULT_IMAGE_PATH}`;
   const desc = description ?? 'Каталог тойхан и банкетных залов по всем городам Казахстана. Фото, цены, вместимость и заявки онлайн.';
   const blocks = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
 

@@ -3,7 +3,7 @@ pipeline {
     stages {
         stage('Deploy') {
             steps {
-                sh '/root/toikhana/deploy.sh'
+                sh '/var/jenkins_home/deploy.sh'
             }
         }
     }
