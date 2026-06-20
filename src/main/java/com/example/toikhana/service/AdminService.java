@@ -32,19 +32,22 @@ public class AdminService {
     private final ToyTypeRepository toyTypeRepository;
     private final CatalogService catalogService;
     private final FileStorageService fileStorageService;
+    private final CityCountService cityCountService;
 
     public AdminService(ToikhanaRepository toikhanaRepository,
                         ToikhanaPhotoRepository photoRepository,
                         CityRepository cityRepository,
                         ToyTypeRepository toyTypeRepository,
                         CatalogService catalogService,
-                        FileStorageService fileStorageService) {
+                        FileStorageService fileStorageService,
+                        CityCountService cityCountService) {
         this.toikhanaRepository = toikhanaRepository;
         this.photoRepository = photoRepository;
         this.cityRepository = cityRepository;
         this.toyTypeRepository = toyTypeRepository;
         this.catalogService = catalogService;
         this.fileStorageService = fileStorageService;
+        this.cityCountService = cityCountService;
     }
 
     public List<Toikhana> list() {
@@ -77,7 +80,7 @@ public class AdminService {
         apply(request, toikhana);
         Toikhana saved = toikhanaRepository.save(toikhana);
         replaceToyTypes(saved, request.getToyTypeIds());
-        refreshCityCounts();
+        cityCountService.refresh();
         return saved;
     }
 
@@ -100,7 +103,7 @@ public class AdminService {
         apply(request, toikhana);
         Toikhana saved = toikhanaRepository.save(toikhana);
         replaceToyTypes(saved, request.getToyTypeIds());
-        refreshCityCounts();
+        cityCountService.refresh();
         return saved;
     }
 
@@ -116,7 +119,7 @@ public class AdminService {
         toikhanaRepository.save(toikhana);
         photoRepository.deleteByToikhanaId(id);
         toikhanaRepository.deleteById(id);
-        refreshCityCounts();
+        cityCountService.refresh();
     }
 
     public PhotoDto addPhoto(Long id, MultipartFile file, boolean isMain, Integer sortOrder) {
@@ -175,18 +178,5 @@ public class AdminService {
         }
         toikhana.setToyTypes(toyTypes);
         toikhanaRepository.save(toikhana);
-    }
-
-    private void refreshCityCounts() {
-        for (City city : cityRepository.findAll()) {
-            int count = 0;
-            for (Toikhana toikhana : toikhanaRepository.findAll()) {
-                if (city.getId().equals(toikhana.getCityId()) && toikhana.isActive()) {
-                    count++;
-                }
-            }
-            city.setToikhanaCount(count);
-            cityRepository.save(city);
-        }
     }
 }

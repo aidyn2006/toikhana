@@ -16,6 +16,7 @@ import com.example.toikhana.repository.ToikhanaPhotoRepository;
 import com.example.toikhana.repository.ToikhanaRepository;
 import com.example.toikhana.repository.ToyTypeRepository;
 import com.example.toikhana.repository.UserRepository;
+import com.example.toikhana.service.CityCountService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -43,6 +44,7 @@ public class DataLoader implements CommandLineRunner {
     private final BlogPostRepository blogPostRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final CityCountService cityCountService;
     private final String adminEmail;
     private final String adminPassword;
 
@@ -53,6 +55,7 @@ public class DataLoader implements CommandLineRunner {
                       BlogPostRepository blogPostRepository,
                       UserRepository userRepository,
                       PasswordEncoder passwordEncoder,
+                      CityCountService cityCountService,
                       @Value("${toikhana.admin.email:admin@toikhana.kz}") String adminEmail,
                       @Value("${toikhana.admin.password:admin123}") String adminPassword) {
         this.cityRepository = cityRepository;
@@ -62,6 +65,7 @@ public class DataLoader implements CommandLineRunner {
         this.blogPostRepository = blogPostRepository;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.cityCountService = cityCountService;
         this.adminEmail = adminEmail;
         this.adminPassword = adminPassword;
     }
@@ -131,7 +135,7 @@ public class DataLoader implements CommandLineRunner {
         ensureToikhana("zhezkazgan", "Ulytau Hall", "ulytau-hall", 60, 220, 80000, 240000, true, wedding, kudalyk);
         ensureToikhana("konaev", "Balqash Hall", "balqash-hall", 70, 280, 100000, 320000, true, wedding, corporate);
 
-        recalcCityCounts();
+        cityCountService.refresh();
         seedBlogPosts();
         ensureAdminUser();
     }
@@ -217,20 +221,6 @@ public class DataLoader implements CommandLineRunner {
         photo.setMain(main);
         photo.setSortOrder(sortOrder);
         return photo;
-    }
-
-    private void recalcCityCounts() {
-        java.util.List<Toikhana> all = toikhanaRepository.findAll();
-        for (City city : cityRepository.findAll()) {
-            int count = 0;
-            for (Toikhana toikhana : all) {
-                if (city.getId().equals(toikhana.getCityId()) && toikhana.isActive()) {
-                    count++;
-                }
-            }
-            city.setToikhanaCount(count);
-            cityRepository.save(city);
-        }
     }
 
     private void seedBlogPosts() {

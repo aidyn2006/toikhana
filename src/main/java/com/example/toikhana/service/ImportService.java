@@ -35,15 +35,18 @@ public class ImportService {
     private final ToikhanaPhotoRepository photoRepository;
     private final CityRepository cityRepository;
     private final FileStorageService fileStorageService;
+    private final CityCountService cityCountService;
 
     public ImportService(ToikhanaRepository toikhanaRepository,
                          ToikhanaPhotoRepository photoRepository,
                          CityRepository cityRepository,
-                         FileStorageService fileStorageService) {
+                         FileStorageService fileStorageService,
+                         CityCountService cityCountService) {
         this.toikhanaRepository = toikhanaRepository;
         this.photoRepository = photoRepository;
         this.cityRepository = cityRepository;
         this.fileStorageService = fileStorageService;
+        this.cityCountService = cityCountService;
     }
 
     public Map<String, Object> importFrom2gis(ImportRequest request) {
@@ -85,7 +88,7 @@ public class ImportService {
             photosDownloaded += downloadPhotos(saved.getId(), item.getPhotoUrls());
         }
 
-        refreshCityCounts();
+        cityCountService.refresh();
 
         Map<String, Object> result = new HashMap<String, Object>();
         result.put("created", created);
@@ -132,20 +135,6 @@ public class ImportService {
             suffix++;
         }
         return slug;
-    }
-
-    private void refreshCityCounts() {
-        List<Toikhana> all = toikhanaRepository.findAll();
-        for (City city : cityRepository.findAll()) {
-            int count = 0;
-            for (Toikhana toikhana : all) {
-                if (city.getId().equals(toikhana.getCityId()) && toikhana.isActive()) {
-                    count++;
-                }
-            }
-            city.setToikhanaCount(count);
-            cityRepository.save(city);
-        }
     }
 
     private static String truncate(String value, int max) {
