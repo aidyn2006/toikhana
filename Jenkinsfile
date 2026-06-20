@@ -3,7 +3,9 @@ pipeline {
     stages {
         stage('Deploy') {
             steps {
-                sh '/var/jenkins_home/deploy.sh'
+                sh '''
+                    docker exec vm5684 bash -c "cd /root/toikhana && git pull origin master && docker compose up -d --build"
+                '''
             }
         }
     }
