@@ -9,12 +9,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...((init?.headers as Record<string, string>) ?? {}),
-    ...getUserAuthHeader(),
-    // Only attach admin Basic credentials to admin endpoints. Sending them on
-    // public endpoints makes Spring's BasicAuthenticationFilter reject the
-    // request with 401 (auth runs before authorization) when the stored
-    // credentials are stale, even though the endpoint is permitAll.
-    ...(path.startsWith('/api/admin') ? getAdminAuthHeader() : {})
+    // Admin requests authorize via the same JWT as regular users: the seeded
+    // admin account (role=ADMIN) gets a token whose ROLE_ADMIN authority the
+    // backend's JwtAuthFilter applies on the /api/admin chain too.
+    ...getUserAuthHeader()
   };
   const response = await fetch(`${API_BASE}${path}`, {
     ...init,
@@ -27,19 +25,6 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   return response.json() as Promise<T>;
-}
-
-function getAdminAuthHeader(): Record<string, string> {
-  const auth = localStorage.getItem('toikhana.adminAuth');
-  return auth ? { Authorization: `Basic ${auth}` } : {};
-}
-
-export function setAdminAuth(username: string, password: string) {
-  localStorage.setItem('toikhana.adminAuth', btoa(`${username}:${password}`));
-}
-
-export function clearAdminAuth() {
-  localStorage.removeItem('toikhana.adminAuth');
 }
 
 const TOKEN_KEY = 'toikhana.token';
@@ -132,11 +117,6 @@ export function submitOwnerApplication(payload: {
   });
 }
 
-export function adminLogin(username: string, password: string) {
-  setAdminAuth(username, password);
-  return request('/api/admin/toikhanas');
-}
-
 export function getAdminToikhanas() {
   return request<ToikhanaCard[]>('/api/admin/toikhanas');
 }
@@ -172,8 +152,7 @@ export function uploadAdminToikhanaPhoto(
     method: 'POST',
     body: formData,
     headers: {
-      ...getUserAuthHeader(),
-      ...getAdminAuthHeader()
+      ...getUserAuthHeader()
     }
   }).then(async (response) => {
     if (!response.ok) {
@@ -218,13 +197,6 @@ export function importFrom2gis(payload: {
       throw new Error(data.error ?? `Import failed: ${response.status}`);
     }
     return response.json() as Promise<Import2gisResult>;
-  });
-}
-
-export function updateBookingStatus(id: number, status: string) {
-  return request<Booking>(`/api/admin/bookings/${id}/status`, {
-    method: 'PUT',
-    body: JSON.stringify({ status })
   });
 }
 
